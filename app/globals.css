@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --colorblock-purple: #8B5CF6;
+  --colorblock-pink: #EC4899;
+  --colorblock-blue: #3B82F6;
+  --colorblock-cyan: #06B6D4;
+  --colorblock-yellow: #FBBF24;
+  --colorblock-green: #10B981;
+  --colorblock-orange: #F97316;
+  --colorblock-red: #EF4444;
+  --colorblock-black: #000000;
+  --colorblock-white: #FFFFFF;
+  --colorblock-gray: #1F2937;
+}
+
+@theme inline {
+  --color-purple: var(--colorblock-purple);
+  --color-pink: var(--colorblock-pink);
+  --color-blue: var(--colorblock-blue);
+  --color-cyan: var(--colorblock-cyan);
+  --color-yellow: var(--colorblock-yellow);
+  --color-green: var(--colorblock-green);
+  --color-orange: var(--colorblock-orange);
+  --color-red: var(--colorblock-red);
+}
+
+body {
+  background: var(--colorblock-white);
+  color: var(--colorblock-black);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Colorblock utility classes */
+.colorblock-shadow {
+  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.1);
+}
+
+.colorblock-shadow-lg {
+  box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 0.15);
+}
+
+.colorblock-shadow-xl {
+  box-shadow: 16px 16px 0px 0px rgba(0, 0, 0, 0.2);
+}
