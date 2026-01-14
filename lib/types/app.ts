@@ -8,53 +8,40 @@ import type { QuestionType, QuizStatus, SessionStatus, GameMode } from './databa
 export type { GameMode };
 
 export interface QuestionOption {
-  id?: number;
+  id?: string;
   text: string;
   isCorrect: boolean;
   order: number;
 }
 
-export interface Round {
-  id?: number;
-  quizId?: number;
-  gameMode: GameMode;
-  order: number;
-  title?: string;
-  description?: string;
-  questions?: Question[];
-}
-
 export interface Question {
-  id?: number;
+  id?: string;
   type: QuestionType;
   text: string;
   imageUrl?: string;
   order: number;
   timeLimit?: number;
-  roundId?: number;
   options?: QuestionOption[];
 }
 
 export interface Quiz {
-  id?: number;
+  id?: string;
   title: string;
   description?: string;
   hostId: string;
-  code: string;
   status: QuizStatus;
   imageUrl?: string;
   emoji?: string;
   isPublic?: boolean;
   gameMode?: GameMode;
   questions?: Question[];
-  rounds?: Round[];
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 export interface Participant {
-  id?: number;
-  sessionId: number;
+  id?: string;
+  sessionId: string;
   userId: string;
   userName?: string;
   score: number;
@@ -62,11 +49,11 @@ export interface Participant {
 }
 
 export interface QuizSession {
-  id?: number;
-  quizId: number;
+  id?: string;
+  quizId: string;
   code: string;
   status: SessionStatus;
-  currentQuestionId?: number | null;
+  currentQuestionId?: string | null;
   startedAt?: Date | null;
   endedAt?: Date | null;
   quiz?: Quiz;
@@ -75,12 +62,12 @@ export interface QuizSession {
 }
 
 export interface Answer {
-  id?: number;
-  sessionId: number;
-  questionId: number;
+  id?: string;
+  sessionId: string;
+  questionId: string;
   userId: string;
   answerText?: string;
-  optionId?: number;
+  optionId?: string;
   isCorrect: boolean;
   answeredAt?: Date;
 }

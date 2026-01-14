@@ -75,7 +75,6 @@ export function convertQuiz(quiz: DatabaseQuiz): Quiz {
     title: quiz.title,
     description: quiz.description ?? undefined,
     hostId: quiz.hostId,
-    code: quiz.code,
     status: validateQuizStatus(quiz.status),
     questions: quiz.questions?.map(convertQuestion),
     createdAt: quiz.createdAt,

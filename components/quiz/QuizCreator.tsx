@@ -9,11 +9,11 @@ import { QuizHeader } from './QuizHeader';
 import { ViewModeToggle } from './ViewModeToggle';
 import { QuestionList } from './QuestionList';
 import { PreviewPanel } from './PreviewPanel';
-import { createQuiz, updateQuiz } from '@/app/(app)/actions/quiz';
 import { getErrorMessage } from '@/lib/types/errors';
 import { cn } from '@/lib/utils/cn';
 import { useToast } from '@/lib/hooks/useToast';
 import { convertQuestion } from '@/lib/types/converters';
+import { quizSchema } from '@/lib/utils/validation';
 
 interface QuizCreatorProps {
   initialTemplate?: QuizTemplate | null;
@@ -96,55 +96,121 @@ export function QuizCreator({ initialTemplate, initialQuiz }: QuizCreatorProps) 
   };
 
   const handleSubmit = async () => {
-    if (!title.trim()) {
-      showToast('Please enter a quiz title', 'warning');
-      return;
-    }
+    // Prepare request body
+    const requestBody = {
+      title,
+      description,
+      imageUrl: imageUrl || undefined,
+      emoji: emoji || undefined,
+      isPublic,
+      gameMode,
+      questions: questions.map((q, i) => ({
+        ...q,
+        order: i,
+      })),
+    };
 
-    if (questions.length === 0) {
-      showToast('Please add at least one question', 'warning');
+    // Client-side validation
+    try {
+      quizSchema.parse(requestBody);
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'issues' in error) {
+        const zodError = error as { issues: Array<{ message: string; path: (string | number)[] }> };
+        const firstError = zodError.issues[0];
+        const errorMessage = firstError?.message || 'Validation error';
+        showToast(errorMessage, 'error');
+        return;
+      }
+      showToast('Validation error', 'error');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      let quizId: string;
+
       if (isEditing && initialQuiz) {
         // Database returns quizId, not id
-        const quizId = (initialQuiz as any).quizId || (initialQuiz as any).id;
+        quizId = (initialQuiz as any).quizId || (initialQuiz as any).id;
         if (!quizId) {
           showToast('Invalid quiz data', 'error');
           return;
         }
-        const result = await updateQuiz(quizId, {
-          title,
-          description,
-          imageUrl,
-          emoji,
-          isPublic,
-          gameMode,
-          questions: questions.map((q, i) => ({
-            ...q,
-            order: i,
-          })),
+
+        // Update quiz via API route
+        const updateResponse = await fetch(`/api/quizzes/${quizId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
         });
+
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json();
+          
+          // Format user-friendly error message
+          let errorMessage = 'Failed to update quiz';
+          
+          if (errorData.details && Array.isArray(errorData.details)) {
+            // Format Zod validation errors into user-friendly messages
+            const firstError = errorData.details[0];
+            errorMessage = firstError.message || errorMessage;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error !== 'Validation error') {
+            errorMessage = errorData.error;
+          }
+          
+          throw new Error(errorMessage);
+        }
+
         showToast('Quiz updated successfully', 'success');
-        router.push(`/host/${result.code}`);
       } else {
-        const result = await createQuiz({
-          title,
-          description,
-          imageUrl,
-          emoji,
-          isPublic,
-          gameMode,
-          questions: questions.map((q, i) => ({
-            ...q,
-            order: i,
-          })),
+        // Create quiz via API route
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/5134a8ed-b1fa-4c9c-af27-abb06348495e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'QuizCreator.tsx:148',message:'Client: Before quiz creation request',data:{hasTitle:!!title,questionsCount:requestBody.questions.length,hasRounds:false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        const createResponse = await fetch('/api/quizzes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/5134a8ed-b1fa-4c9c-af27-abb06348495e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'QuizCreator.tsx:165',message:'Client: Response received',data:{status:createResponse.status,ok:createResponse.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});;
+        // #endregion
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/5134a8ed-b1fa-4c9c-af27-abb06348495e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'QuizCreator.tsx:167',message:'Client: Error response',data:{status:createResponse.status,error:errorData.error,message:errorData.message,details:errorData.details},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'ALL'})}).catch(()=>{});
+          // #endregion
+          
+          // Format user-friendly error message
+          let errorMessage = 'Failed to create quiz';
+          
+          if (errorData.details && Array.isArray(errorData.details)) {
+            // Format Zod validation errors into user-friendly messages
+            const firstError = errorData.details[0];
+            errorMessage = firstError.message || errorMessage;
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error && errorData.error !== 'Validation error') {
+            errorMessage = errorData.error;
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        const createdQuiz = await createResponse.json();
+        quizId = createdQuiz.quizId;
         showToast('Quiz created successfully', 'success');
-        router.push(`/host/${result.code}`);
       }
+
+      // Redirect to myquiz page
+      router.push('/myquiz');
     } catch (error: unknown) {
       showToast(
         getErrorMessage(error) || 

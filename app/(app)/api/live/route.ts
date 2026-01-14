@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       total: number;
       correct: number;
       incorrect: number;
-      byOption: Record<number, number>;
+      byOption: Record<string, number>;
     };
     let answerStats: AnswerStats | null = null;
     if (session.currentQuestionId) {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         total: questionAnswers.length,
         correct: questionAnswers.filter(a => a.isCorrect).length,
         incorrect: questionAnswers.filter(a => !a.isCorrect).length,
-        byOption: {} as Record<number, number>,
+        byOption: {} as Record<string, number>,
       };
 
       questionAnswers.forEach(answer => {

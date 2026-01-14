@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Question, QuestionType } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { OptionButton } from '@/components/ui/OptionButton';
-import { Trash2, Plus, GripVertical } from 'lucide-react';
+import { Trash2, Plus, GripVertical, Upload, X } from 'lucide-react';
+import { useToast } from '@/lib/hooks/useToast';
 
 interface QuestionEditorProps {
   question: Question;
@@ -21,6 +22,8 @@ interface QuestionEditorProps {
 
 export function QuestionEditor({ question, index, onChange, onDelete, dragHandleProps, rounds, hideHeader = false }: QuestionEditorProps) {
   const [localQuestion, setLocalQuestion] = useState(question);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   // Update local state when question prop changes (e.g., after reordering)
   useEffect(() => {
@@ -54,6 +57,64 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
   const deleteOption = (optionIndex: number) => {
     const newOptions = localQuestion.options?.filter((_, i) => i !== optionIndex) || [];
     updateQuestion({ options: newOptions });
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type - only allow PNG, JPEG, JPG
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    // Check for HEIC files explicitly
+    if (file.type === 'image/heic' || file.type === 'image/heif' || fileExtension === '.heic' || fileExtension === '.heif') {
+      showToast('HEIC files are not supported. Please use PNG, JPEG, or JPG format.', 'error');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+    
+    // Check if file type is allowed
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      showToast('Please select a PNG, JPEG, or JPG image file', 'error');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      showToast('Image size must be less than 5MB', 'error');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Convert to base64 data URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        updateQuestion({ imageUrl: dataUrl });
+      }
+    };
+    reader.onerror = () => {
+      showToast('Failed to read image file', 'error');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
   };
 
   const content = (
@@ -102,6 +163,56 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
           placeholder="Enter your question..."
         />
 
+        {/* Optional image for any question type */}
+        <div className="space-y-3">
+          <label className="block text-sm font-bold text-[#1F2937]">
+            Question Image (Optional)
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <div className="flex gap-2 items-center">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleImageClick}
+              className="flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Choose Image
+            </Button>
+            {localQuestion.imageUrl && (
+              <div className="relative">
+                <img
+                  src={localQuestion.imageUrl}
+                  alt="Question preview"
+                  className="w-16 h-16 object-cover border-4 border-[#1F2937] rounded-lg"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => updateQuestion({ imageUrl: undefined })}
+                  className="absolute -top-2 -right-2 bg-[#FCA5A5] text-[#1F2937] rounded-full p-1 hover:scale-110 transition-transform"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+          {localQuestion.imageUrl && (
+            <p className="text-sm font-bold text-[#6B7280]">
+              Image selected. Click the X to remove.
+            </p>
+          )}
+        </div>
+
         {(localQuestion.type === 'multiple_choice' || localQuestion.type === 'true_false') && (
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -144,15 +255,6 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
           </div>
         )}
 
-        {localQuestion.type === 'image' && (
-          <Input
-            label="Image URL"
-            type="url"
-            value={localQuestion.imageUrl || ''}
-            onChange={(e) => updateQuestion({ imageUrl: e.target.value })}
-            placeholder="https://example.com/image.jpg"
-          />
-        )}
 
         <Input
           label="Time Limit (seconds)"

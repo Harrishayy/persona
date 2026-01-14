@@ -7,10 +7,10 @@ import { eq, and } from 'drizzle-orm';
 import { answerSubmissionSchema } from '@/lib/utils/validation';
 
 export async function submitAnswer(data: {
-  sessionId: number;
-  questionId: number;
+  sessionId: string;
+  questionId: string;
   answerText?: string;
-  optionId?: number;
+  optionId?: string;
 }) {
   const { user } = await withAuth();
   if (!user) {

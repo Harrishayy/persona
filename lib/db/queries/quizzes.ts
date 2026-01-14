@@ -17,20 +17,8 @@ export async function getQuizById(id: number) {
   return quiz;
 }
 
-export async function getQuizByCode(code: string) {
-  const quiz = await db.query.quizzes.findFirst({
-    where: eq(quizzes.code, code),
-    with: {
-      questions: {
-        with: {
-          options: true,
-        },
-        orderBy: (questions, { asc }) => [asc(questions.order)],
-      },
-    },
-  });
-  return quiz;
-}
+// Removed getQuizByCode - quizzes no longer have codes
+// Use getQuizById instead
 
 export async function getQuizzesByHostId(hostId: string) {
   return await db.query.quizzes.findMany({
@@ -43,7 +31,6 @@ export async function createQuiz(data: {
   title: string;
   description?: string;
   hostId: string;
-  code: string;
 }) {
   const [quiz] = await db.insert(quizzes).values(data).returning();
   return quiz;

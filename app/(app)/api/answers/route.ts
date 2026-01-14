@@ -89,8 +89,8 @@ export async function GET(request: NextRequest) {
     if (questionId) {
       const questionAnswers = await db.query.answers.findMany({
         where: (answers, { and, eq }) => and(
-          eq(answers.sessionId, parseInt(sessionId)),
-          eq(answers.questionId, parseInt(questionId))
+          eq(answers.sessionId, sessionId),
+          eq(answers.questionId, questionId)
         ),
         with: {
           // We need to get participant info through a join
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
         questionAnswers.map(async (answer) => {
           const participant = await db.query.participants.findFirst({
             where: (participants, { and, eq }) => and(
-              eq(participants.sessionId, parseInt(sessionId)),
+              eq(participants.sessionId, sessionId),
               eq(participants.userId, answer.userId)
             ),
           });
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
       );
 
       // Calculate answer distribution
-      const distribution: Record<number, number> = {};
+      const distribution: Record<string, number> = {};
       questionAnswers.forEach((answer) => {
         if (answer.optionId !== null) {
           distribution[answer.optionId] = (distribution[answer.optionId] || 0) + 1;
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
     if (playerId) {
       const userAnswers = await db.query.answers.findMany({
         where: (answers, { and, eq }) => and(
-          eq(answers.sessionId, parseInt(sessionId)),
+          eq(answers.sessionId, sessionId),
           eq(answers.userId, playerId)
         ),
       });

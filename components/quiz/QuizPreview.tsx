@@ -88,11 +88,16 @@ export function QuizPreview({ quiz, activeQuestionIndex }: QuizPreviewProps) {
             <Card variant="yellow" className="p-4 text-center">
               <p className="font-bold text-lg">Image Question</p>
               {activeQuestion.imageUrl && (
-                <img
-                  src={activeQuestion.imageUrl}
-                  alt="Question"
-                  className="w-full max-h-64 object-cover mt-4 border-4 border-[#1F2937] rounded-lg"
-                />
+                <div className="mt-4 flex items-center justify-center">
+                  <div className="inline-block border-4 border-[#1F2937] rounded-lg bg-white p-2">
+                    <img
+                      src={activeQuestion.imageUrl}
+                      alt="Question"
+                      className="h-auto max-h-96 max-w-full object-contain"
+                      style={{ display: 'block' }}
+                    />
+                  </div>
+                </div>
               )}
             </Card>
           )}
@@ -111,11 +116,16 @@ export function QuizPreview({ quiz, activeQuestionIndex }: QuizPreviewProps) {
             <div className="text-6xl mb-4">{quiz.emoji}</div>
           )}
           {quiz.imageUrl && !quiz.emoji && (
-            <img
-              src={quiz.imageUrl}
-              alt={quiz.title}
-              className="w-32 h-32 object-cover mx-auto mb-4 border-4 border-[#1F2937] rounded-lg"
-            />
+            <div className="flex items-center justify-center mb-4">
+              <div className="inline-block border-4 border-[#1F2937] rounded-lg bg-white p-2">
+                <img
+                  src={quiz.imageUrl}
+                  alt={quiz.title}
+                  className="h-auto max-h-48 max-w-full object-contain"
+                  style={{ display: 'block', maxWidth: '200px' }}
+                />
+              </div>
+            </div>
           )}
           {!quiz.emoji && !quiz.imageUrl && (
             <Gamepad2 className="w-32 h-32 mx-auto mb-4 text-[#1F2937]" />

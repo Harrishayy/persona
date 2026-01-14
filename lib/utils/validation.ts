@@ -13,7 +13,6 @@ export const questionSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal('')),
   order: z.number().int().min(0),
   timeLimit: z.number().int().positive().optional(),
-  roundId: z.number().int().positive().optional(),
   options: z.array(questionOptionSchema).optional(),
 }).refine((data) => {
   if (data.type === 'multiple_choice' || data.type === 'true_false') {
@@ -34,14 +33,6 @@ export const questionSchema = z.object({
   path: ['options'],
 });
 
-export const roundSchema = z.object({
-  gameMode: z.enum(['standard', 'quiplash', 'fibbage', 'rate_favourite_drawings', 'custom']),
-  order: z.number().int().min(0),
-  title: z.string().max(200, 'Title must be less than 200 characters').optional(),
-  description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
-  questions: z.array(questionSchema).optional(),
-});
-
 export const quizSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional(),
@@ -49,18 +40,7 @@ export const quizSchema = z.object({
   emoji: z.string().max(10, 'Emoji must be a single emoji').optional().or(z.literal('')),
   isPublic: z.boolean().optional().default(false),
   gameMode: z.enum(['standard', 'quiplash', 'fibbage', 'rate_favourite_drawings', 'custom']).optional().default('standard'),
-  rounds: z.array(roundSchema).optional(),
   questions: z.array(questionSchema).min(1, 'At least one question is required'),
-}).refine((data) => {
-  // If rounds exist, questions should be assigned to rounds
-  // If no rounds, questions belong directly to quiz
-  if (data.rounds && data.rounds.length > 0) {
-    // Questions can optionally be assigned to rounds
-    return true;
-  }
-  return true;
-}, {
-  message: 'Questions must be assigned to rounds if rounds exist',
 });
 
 export const codeInputSchema = z.object({
@@ -68,10 +48,10 @@ export const codeInputSchema = z.object({
 });
 
 export const answerSubmissionSchema = z.object({
-  sessionId: z.number().int().positive(),
-  questionId: z.number().int().positive(),
+  sessionId: z.string().uuid(),
+  questionId: z.string().uuid(),
   answerText: z.string().optional(),
-  optionId: z.number().int().positive().optional(),
+  optionId: z.string().uuid().optional(),
 }).refine((data) => {
   return data.answerText || data.optionId;
 }, {

@@ -32,12 +32,15 @@ export function QuestionCard({
         {question}
       </h2>
       {imageUrl && (
-        <div className="mb-4 border-4 border-[#1F2937] overflow-hidden">
-          <img
-            src={imageUrl}
-            alt="Question"
-            className="w-full h-auto max-h-64 object-cover"
-          />
+        <div className="mb-4 flex items-center justify-center">
+          <div className="inline-block border-4 border-[#1F2937] rounded-lg bg-white p-2">
+            <img
+              src={imageUrl}
+              alt="Question"
+              className="h-auto max-h-96 max-w-full object-contain"
+              style={{ display: 'block' }}
+            />
+          </div>
         </div>
       )}
       {children && <div className="mt-6">{children}</div>}

@@ -1,7 +1,6 @@
 import { db } from '../connection';
 import { quizzes } from '../schema';
 import { eq, and } from 'drizzle-orm';
-import { generateUniqueCode } from '@/lib/utils/code-generator';
 
 export interface DraftData {
   title: string;
@@ -56,21 +55,13 @@ export async function saveDraft(userId: string, draftData: DraftData) {
 
     return updated;
   } else {
-    // Create new draft quiz with unique code
-    const code = await generateUniqueCode(async (code) => {
-      const existing = await db.query.quizzes.findFirst({
-        where: eq(quizzes.code, code),
-      });
-      return !!existing;
-    });
-
+    // Create new draft quiz
     const [newDraft] = await db
       .insert(quizzes)
       .values({
         title: draftData.title || 'Untitled Quiz',
         description: draftData.description || null,
         hostId: userId,
-        code,
         status: 'draft',
         imageUrl: draftData.imageUrl || null,
         emoji: draftData.emoji || null,

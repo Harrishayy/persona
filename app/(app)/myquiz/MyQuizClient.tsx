@@ -6,20 +6,19 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import Link from 'next/link';
 import { Edit, Trash2, Eye, Play, Gamepad2 } from 'lucide-react';
-import { getDeterministicColors, hexColorsToVariants, ALL_VARIANTS } from '@/lib/utils/colors';
+import { getDeterministicColors, hexColorsToVariants, ALL_VARIANTS, type ColorVariant } from '@/lib/utils/colors';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/lib/hooks/useToast';
 import { QuizPreviewModal } from '@/components/quiz/QuizPreviewModal';
-import type { Question } from '@/lib/types/app';
-import { convertQuestion } from '@/lib/types/converters';
+import { useQuizPreview } from '@/lib/hooks/useQuizPreview';
 import { createSession } from '@/app/(app)/actions/session';
+import { deleteQuiz } from '@/app/(app)/actions/quiz';
 import { getErrorMessage } from '@/lib/types/errors';
 
 interface Quiz {
-  quizId: number;
+  quizId: string;
   title: string;
   description?: string;
-  code: string;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -32,24 +31,28 @@ interface MyQuizClientProps {
 export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
   const [quizzes, setQuizzes] = useState<Quiz[]>(initialQuizzes);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [quizToDelete, setQuizToDelete] = useState<number | null>(null);
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [previewQuestions, setPreviewQuestions] = useState<Question[]>([]);
-  const [previewQuizTitle, setPreviewQuizTitle] = useState('');
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
+  const {
+    previewModalOpen,
+    previewQuestions,
+    previewQuizTitle,
+    isLoadingPreview,
+    openPreview,
+    closePreview,
+  } = useQuizPreview();
   const router = useRouter();
   const { showToast } = useToast();
   
   // Use deterministic color assignment based on quiz IDs to prevent hydration mismatches
   const getVariantForQuiz = (quiz: Quiz, index: number): ColorVariant => {
     // Use quiz ID as seed for deterministic color assignment
-    const seed = `quiz-${quiz.quizId}-${quiz.code}`;
+    const seed = `quiz-${quiz.quizId}`;
     const colors = getDeterministicColors(seed, 1);
     const variant = hexColorsToVariants(colors)[0];
     return variant || ALL_VARIANTS[index % ALL_VARIANTS.length];
   };
 
-  const handleDelete = async (quizId: number) => {
+  const handleDelete = async (quizId: string) => {
     setQuizToDelete(quizId);
     setDeleteModalOpen(true);
   };
@@ -58,50 +61,22 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
     if (!quizToDelete) return;
 
     try {
-      const response = await fetch(`/api/quizzes/${quizToDelete}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setQuizzes(quizzes.filter(q => q.quizId !== quizToDelete));
-        showToast('Quiz deleted successfully', 'success');
-      } else {
-        showToast('Failed to delete quiz', 'error');
-      }
+      await deleteQuiz(quizToDelete);
+      setQuizzes(quizzes.filter(q => q.quizId !== quizToDelete));
+      showToast('Quiz deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting quiz:', error);
-      showToast('Error deleting quiz', 'error');
+      const errorMessage = getErrorMessage(error) || 'Failed to delete quiz';
+      showToast(errorMessage, 'error');
     } finally {
       setDeleteModalOpen(false);
       setQuizToDelete(null);
     }
   };
 
-  const handlePublish = async (quizId: number, currentStatus: string) => {
-    const newStatus = currentStatus === 'published' ? 'draft' : 'published';
-    
-    try {
-      const response = await fetch(`/api/quizzes/${quizId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
 
-      if (response.ok) {
-        setQuizzes(quizzes.map(q => 
-          q.quizId === quizId ? { ...q, status: newStatus } : q
-        ));
-        router.refresh();
-      } else {
-        showToast('Failed to update quiz status', 'error');
-      }
-    } catch (error) {
-      console.error('Error updating quiz:', error);
-      showToast('Error updating quiz', 'error');
-    }
-  };
 
-  const handleHost = async (quizId: number) => {
+  const handleHost = async (quizId: string) => {
     try {
       const result = await createSession(quizId);
       router.push(`/host/${result.code}`);
@@ -110,75 +85,12 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
     }
   };
 
-  const handlePreview = async (quizId: number, quizTitle: string) => {
-    setIsLoadingPreview(true);
-    try {
-      const response = await fetch(`/api/quizzes/${quizId}`);
-      if (!response.ok) {
-        let errorMessage = 'Failed to load quiz';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          errorMessage = `Failed to load quiz (${response.status})`;
-        }
-        throw new Error(errorMessage);
-      }
-      const quiz = await response.json();
-      
-      // Convert questions from database format to app format
-      // Handle both questionId (from Drizzle) and id (from type definition)
-      const questions = (quiz.questions || []).map((q: any) => {
-        try {
-          // Map Drizzle field names to DatabaseQuestion type
-          const dbQuestion = {
-            id: q.questionId || q.id,
-            quizId: q.quizId,
-            roundId: q.roundId ?? null,
-            type: q.type,
-            text: q.text,
-            imageUrl: q.imageUrl ?? null,
-            order: q.order,
-            timeLimit: q.timeLimit ?? null,
-            createdAt: q.createdAt || new Date(),
-            options: q.options?.map((opt: any) => ({
-              id: opt.optionId || opt.id,
-              questionId: opt.questionId,
-              text: opt.text,
-              isCorrect: opt.isCorrect,
-              order: opt.order,
-              createdAt: opt.createdAt || new Date(),
-            })),
-          };
-          return convertQuestion(dbQuestion);
-        } catch (err) {
-          console.error('Error converting question:', err, q);
-          // Return a basic question structure if conversion fails
-          return {
-            type: q.type || 'multiple_choice',
-            text: q.text || '',
-            order: q.order || 0,
-            imageUrl: q.imageUrl || undefined,
-            timeLimit: q.timeLimit || undefined,
-            options: q.options?.map((opt: any) => ({
-              text: opt.text || '',
-              isCorrect: opt.isCorrect || false,
-              order: opt.order || 0,
-            })) || [],
-          };
-        }
-      });
-      
-      setPreviewQuestions(questions);
-      setPreviewQuizTitle(quizTitle);
-      setPreviewModalOpen(true);
-    } catch (error) {
-      console.error('Error loading quiz for preview:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load quiz for preview';
-      showToast(errorMessage, 'error');
-    } finally {
-      setIsLoadingPreview(false);
-    }
+  const handleEdit = (quizId: string) => {
+    router.push(`/create?quizId=${quizId}`);
+  };
+
+  const handlePreview = async (quizId: string, quizTitle: string) => {
+    await openPreview(quizId, quizTitle);
   };
 
   if (quizzes.length === 0) {
@@ -230,7 +142,7 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
 
       <QuizPreviewModal
         isOpen={previewModalOpen}
-        onClose={() => setPreviewModalOpen(false)}
+        onClose={closePreview}
         questions={previewQuestions}
         quizTitle={previewQuizTitle}
       />
@@ -258,16 +170,13 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
                 {quiz.description}
               </p>
             )}
-            
-            <div className="text-sm font-bold opacity-80 mb-4">
-              Code: <span className="font-black">{quiz.code}</span>
-            </div>
 
             <div className="mt-auto pt-4 space-y-2">
               <Button 
                 color={variant} 
                 className="w-full" 
                 size="md"
+                type="button"
                 onClick={() => handleHost(quiz.quizId)}
               >
                 <Play className="w-4 h-4 mr-1" />
@@ -278,6 +187,7 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
                   variant="outline"
                   className="w-full"
                   size="md"
+                  type="button"
                   onClick={() => handleDelete(quiz.quizId)}
                 >
                   <Trash2 className="w-4 h-4 mr-1" />
@@ -287,23 +197,24 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
                   variant="outline"
                   className="w-full"
                   size="md"
-                  onClick={() => handlePreview(quiz.quizId, quiz.title)}
+                  type="button"
+                  onClick={() => handlePreview(quiz.quizId.toString(), quiz.title)}
                   disabled={isLoadingPreview}
                 >
                   <Eye className="w-4 h-4 mr-1" />
                   Preview
                 </Button>
               </div>
-              <Link href={`/create?quizId=${quiz.quizId}`}>
-                <Button
-                  color={variant}
-                  className="w-full"
-                  size="md"
-                >
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
-              </Link>
+              <Button
+                color={variant}
+                className="w-full"
+                size="md"
+                type="button"
+                onClick={() => handleEdit(quiz.quizId)}
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Edit
+              </Button>
             </div>
           </Card>
         );

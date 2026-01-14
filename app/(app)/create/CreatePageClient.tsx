@@ -6,6 +6,8 @@ import { QuizCreator } from '@/components/quiz/QuizCreator';
 import type { QuizTemplate } from '@/lib/types';
 import type { DatabaseQuiz } from '@/lib/types/database';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { getQuizById } from '@/app/(app)/actions/quiz';
+import { getErrorMessage } from '@/lib/types/errors';
 
 export function CreatePageClient() {
   const searchParams = useSearchParams();
@@ -20,19 +22,13 @@ export function CreatePageClient() {
     if (quizId) {
       setIsLoading(true);
       setError(null);
-      fetch(`/api/quizzes/${quizId}`)
-        .then(async (res) => {
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || 'Failed to load quiz');
-          }
-          return res.json();
-        })
+      getQuizById(quizId)
         .then((data) => {
-          setQuiz(data);
+          setQuiz(data as DatabaseQuiz);
         })
         .catch((err) => {
-          setError(err.message || 'Failed to load quiz');
+          const errorMessage = getErrorMessage(err) || 'Failed to load quiz';
+          setError(errorMessage);
         })
         .finally(() => {
           setIsLoading(false);

@@ -9,8 +9,8 @@ export type SessionStatus = 'waiting' | 'active' | 'finished';
 export type GameMode = 'standard' | 'quiplash' | 'fibbage' | 'rate_favourite_drawings' | 'custom';
 
 export interface DatabaseQuestionOption {
-  id: number;
-  questionId: number;
+  id: string;
+  questionId: string;
   text: string;
   isCorrect: boolean;
   order: number;
@@ -18,9 +18,8 @@ export interface DatabaseQuestionOption {
 }
 
 export interface DatabaseQuestion {
-  id: number;
-  quizId: number;
-  roundId: number | null;
+  id: string;
+  quizId: string;
   type: QuestionType;
   text: string;
   imageUrl: string | null;
@@ -30,23 +29,11 @@ export interface DatabaseQuestion {
   options?: DatabaseQuestionOption[];
 }
 
-export interface DatabaseRound {
-  id: number;
-  quizId: number;
-  gameMode: string;
-  order: number;
-  title: string | null;
-  description: string | null;
-  createdAt: Date;
-  questions?: DatabaseQuestion[];
-}
-
 export interface DatabaseQuiz {
-  id: number;
+  id: string;
   title: string;
   description: string | null;
   hostId: string;
-  code: string;
   status: string; // Database returns string, needs validation
   imageUrl: string | null;
   emoji: string | null;
@@ -56,12 +43,11 @@ export interface DatabaseQuiz {
   createdAt: Date;
   updatedAt: Date;
   questions?: DatabaseQuestion[];
-  rounds?: DatabaseRound[];
 }
 
 export interface DatabaseParticipant {
-  id: number;
-  sessionId: number;
+  id: string;
+  sessionId: string;
   userId: string;
   userName: string | null;
   score: number;
@@ -69,11 +55,11 @@ export interface DatabaseParticipant {
 }
 
 export interface DatabaseQuizSession {
-  id: number;
-  quizId: number;
+  id: string;
+  quizId: string;
   code: string;
   status: string; // Database returns string, needs validation
-  currentQuestionId: number | null;
+  currentQuestionId: string | null;
   startedAt: Date | null;
   endedAt: Date | null;
   createdAt: Date;
@@ -82,12 +68,12 @@ export interface DatabaseQuizSession {
 }
 
 export interface DatabaseAnswer {
-  id: number;
-  sessionId: number;
-  questionId: number;
+  id: string;
+  sessionId: string;
+  questionId: string;
   userId: string;
   answerText: string | null;
-  optionId: number | null;
+  optionId: string | null;
   isCorrect: boolean;
   answeredAt: Date;
 }

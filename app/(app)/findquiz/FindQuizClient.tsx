@@ -5,14 +5,16 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Search, Gamepad2 } from 'lucide-react';
+import { Search, Gamepad2, Eye } from 'lucide-react';
 import { getDeterministicColors, hexColorsToVariants, ALL_VARIANTS, type ColorVariant } from '@/lib/utils/colors';
+import { useToast } from '@/lib/hooks/useToast';
+import { QuizPreviewModal } from '@/components/quiz/QuizPreviewModal';
+import { useQuizPreview } from '@/lib/hooks/useQuizPreview';
 
 interface Quiz {
-  quizId: number;
+  quizId: string;
   title: string;
   description?: string;
-  code: string;
   status: string;
   createdAt: Date;
   hostId: string;
@@ -25,7 +27,16 @@ export function FindQuizClient() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [hostingQuizId, setHostingQuizId] = useState<number | null>(null);
+  const [hostingQuizId, setHostingQuizId] = useState<string | null>(null);
+  const {
+    previewModalOpen,
+    previewQuestions,
+    previewQuizTitle,
+    isLoadingPreview,
+    openPreview,
+    closePreview,
+  } = useQuizPreview();
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchQuizzes();
@@ -54,7 +65,7 @@ export function FindQuizClient() {
     fetchQuizzes(searchQuery);
   };
 
-  const handleHostQuiz = async (quizId: number) => {
+  const handleHostQuiz = async (quizId: string) => {
     setHostingQuizId(quizId);
     try {
       const response = await fetch('/api/sessions', {
@@ -72,38 +83,50 @@ export function FindQuizClient() {
       router.push(`/host/${session.code}`);
     } catch (error) {
       console.error('Error hosting quiz:', error);
-      alert(error instanceof Error ? error.message : 'Failed to host quiz');
+      showToast(error instanceof Error ? error.message : 'Failed to host quiz', 'error');
     } finally {
       setHostingQuizId(null);
     }
   };
 
+  const handlePreview = async (quizId: string, quizTitle: string) => {
+    await openPreview(quizId, quizTitle);
+  };
+
   // Use deterministic color assignment based on quiz IDs to prevent hydration mismatches
   const getVariantForQuiz = (quiz: Quiz, index: number): ColorVariant => {
     // Use quiz ID as seed for deterministic color assignment
-    const seed = `quiz-${quiz.quizId}-${quiz.code}`;
+    const seed = `quiz-${quiz.quizId}`;
     const colors = getDeterministicColors(seed, 1);
     const variant = hexColorsToVariants(colors)[0];
     return variant || ALL_VARIANTS[index % ALL_VARIANTS.length];
   };
 
   return (
-    <div className="space-y-8">
-      <Card variant="blue" className="max-w-2xl mx-auto">
-        <form onSubmit={handleSearch} className="flex gap-4">
-          <Input
-            type="text"
-            placeholder="Search quizzes by title or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="submit" variant="primary" size="lg">
-            <Search className="w-5 h-5 mr-2" />
-            Search
-          </Button>
-        </form>
-      </Card>
+    <>
+      <QuizPreviewModal
+        isOpen={previewModalOpen}
+        onClose={closePreview}
+        questions={previewQuestions}
+        quizTitle={previewQuizTitle}
+      />
+
+      <div className="space-y-8">
+        <Card variant="blue" className="max-w-2xl mx-auto">
+          <form onSubmit={handleSearch} className="flex gap-4">
+            <Input
+              type="text"
+              placeholder="Search quizzes by title or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" variant="primary" size="lg">
+              <Search className="w-5 h-5 mr-2" />
+              Search
+            </Button>
+          </form>
+        </Card>
 
       {isLoading ? (
         <div className="text-center py-12">
@@ -144,7 +167,7 @@ export function FindQuizClient() {
                     {quiz.description}
                   </p>
                 )}
-                <div className="mt-auto pt-4">
+                <div className="mt-auto pt-4 space-y-2">
                   <Button
                     color={variant}
                     className="w-full"
@@ -155,12 +178,23 @@ export function FindQuizClient() {
                   >
                     {isHosting ? 'Hosting...' : 'Host Quiz'}
                   </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="md"
+                    onClick={() => handlePreview(quiz.quizId, quiz.title)}
+                    disabled={isLoadingPreview}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    Preview
+                  </Button>
                 </div>
               </Card>
             );
           })}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

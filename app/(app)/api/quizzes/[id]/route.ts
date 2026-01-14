@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 import { db } from '@/lib/db/connection';
-import { quizzes } from '@/lib/db/schema';
+import { quizzes, questions, questionOptions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { quizSchema } from '@/lib/utils/validation';
+import { getErrorMessage } from '@/lib/types/errors';
+import { ZodError } from 'zod';
 
 export async function GET(
   request: NextRequest,
@@ -15,16 +18,14 @@ export async function GET(
     }
 
     const { id } = await params;
-    const quizId = parseInt(id);
+    const quizId = id;
 
     const quiz = await db.query.quizzes.findFirst({
       where: eq(quizzes.quizId, quizId),
       with: {
         questions: {
           with: {
-            options: {
-              orderBy: (options, { asc }) => [asc(options.order)],
-            },
+            options: true,
           },
           orderBy: (questions, { asc }) => [asc(questions.order)],
         },
@@ -40,10 +41,22 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json(quiz);
+    // Sort options manually since orderBy in nested relations can be problematic
+    const quizWithSortedOptions = {
+      ...quiz,
+      questions: quiz.questions?.map((q) => ({
+        ...q,
+        options: q.options && Array.isArray(q.options) 
+          ? q.options.sort((a, b) => (a.order || 0) - (b.order || 0))
+          : [],
+      })) || [],
+    };
+
+    return NextResponse.json(quizWithSortedOptions);
   } catch (error) {
     console.error('Error fetching quiz:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -58,7 +71,7 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const quizId = parseInt(id);
+    const quizId = id;
 
     const quiz = await db.query.quizzes.findFirst({
       where: eq(quizzes.quizId, quizId),
@@ -72,12 +85,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Delete the quiz (cascade will handle related records)
     await db.delete(quizzes).where(eq(quizzes.quizId, quizId));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting quiz:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
@@ -92,8 +107,10 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const quizId = parseInt(id);
+    const quizId = id;
+
     const body = await request.json();
+    const validated = quizSchema.parse(body);
 
     const quiz = await db.query.quizzes.findFirst({
       where: eq(quizzes.quizId, quizId),
@@ -107,15 +124,68 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const [updated] = await db
-      .update(quizzes)
-      .set({ ...body, updatedAt: new Date() })
-      .where(eq(quizzes.quizId, quizId))
-      .returning();
+    // Update quiz metadata
+    await db.update(quizzes).set({
+      title: validated.title,
+      description: validated.description || null,
+      imageUrl: validated.imageUrl || null,
+      emoji: validated.emoji || null,
+      isPublic: validated.isPublic || false,
+      gameMode: validated.gameMode || 'standard',
+      updatedAt: new Date(),
+    }).where(eq(quizzes.quizId, quizId));
 
-    return NextResponse.json(updated);
-  } catch (error) {
+    // Delete existing questions and options
+    const existingQuestions = await db.query.questions.findMany({
+      where: eq(questions.quizId, quizId),
+    });
+
+    for (const question of existingQuestions) {
+      await db.delete(questionOptions).where(eq(questionOptions.questionId, question.questionId));
+    }
+    await db.delete(questions).where(eq(questions.quizId, quizId));
+
+    // Create new questions and options
+    for (const questionData of validated.questions) {
+      const [question] = await db.insert(questions).values({
+        quizId,
+        type: questionData.type,
+        text: questionData.text,
+        imageUrl: questionData.imageUrl || null,
+        order: questionData.order,
+        timeLimit: questionData.timeLimit || null,
+      }).returning();
+
+      if (questionData.options && questionData.options.length > 0) {
+        await db.insert(questionOptions).values(
+          questionData.options.map((opt) => ({
+            questionId: question.questionId,
+            text: opt.text,
+            isCorrect: opt.isCorrect,
+            order: opt.order,
+          }))
+        );
+      }
+    }
+
+    const updatedQuiz = await db.query.quizzes.findFirst({
+      where: eq(quizzes.quizId, quizId),
+      with: {
+        questions: {
+          with: {
+            options: true,
+          },
+          orderBy: (questions, { asc }) => [asc(questions.order)],
+        },
+      },
+    });
+
+    return NextResponse.json(updatedQuiz);
+  } catch (error: unknown) {
     console.error('Error updating quiz:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: 'Validation error', details: error.issues }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Internal server error', message: getErrorMessage(error) }, { status: 500 });
   }
 }

@@ -2,10 +2,9 @@
 
 import { withAuth } from '@workos-inc/authkit-nextjs';
 import { db } from '@/lib/db/connection';
-import { quizzes, questions, questionOptions, rounds } from '@/lib/db/schema';
+import { quizzes, questions, questionOptions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { quizSchema } from '@/lib/utils/validation';
-import { generateUniqueCode } from '@/lib/utils/code-generator';
 
 export async function createQuiz(data: {
   title: string;
@@ -14,19 +13,12 @@ export async function createQuiz(data: {
   emoji?: string;
   isPublic?: boolean;
   gameMode?: string;
-  rounds?: Array<{
-    gameMode: string;
-    order: number;
-    title?: string;
-    description?: string;
-  }>;
   questions: Array<{
     type: string;
     text: string;
     imageUrl?: string;
     order: number;
     timeLimit?: number;
-    roundId?: number;
     options?: Array<{
       text: string;
       isCorrect: boolean;
@@ -41,19 +33,11 @@ export async function createQuiz(data: {
 
   const validated = quizSchema.parse(data);
 
-  const code = await generateUniqueCode(async (code) => {
-    const existing = await db.query.quizzes.findFirst({
-      where: eq(quizzes.code, code),
-    });
-    return !!existing;
-  });
-
   // Create quiz
   const [quiz] = await db.insert(quizzes).values({
     title: validated.title,
     description: validated.description || null,
     hostId: user.id,
-    code,
     status: 'published',
     imageUrl: validated.imageUrl || null,
     emoji: validated.emoji || null,
@@ -61,35 +45,10 @@ export async function createQuiz(data: {
     gameMode: validated.gameMode || 'standard',
   }).returning();
 
-  // Create rounds if they exist
-  const roundIdMap = new Map<number, number>();
-  if (validated.rounds && validated.rounds.length > 0) {
-    for (const roundData of validated.rounds) {
-      const [round] = await db.insert(rounds).values({
-        quizId: quiz.quizId,
-        gameMode: roundData.gameMode,
-        order: roundData.order,
-        title: roundData.title || null,
-        description: roundData.description || null,
-      }).returning();
-      roundIdMap.set(roundData.order, round.roundId);
-    }
-  }
-
   // Create questions
   for (const questionData of validated.questions) {
-    let roundId: number | null = null;
-    if (questionData.roundId !== undefined) {
-      if (roundIdMap.has(questionData.roundId)) {
-        roundId = roundIdMap.get(questionData.roundId)!;
-      } else if (questionData.roundId > 0) {
-        roundId = questionData.roundId;
-      }
-    }
-
     const [question] = await db.insert(questions).values({
       quizId: quiz.quizId,
-      roundId,
       type: questionData.type,
       text: questionData.text,
       imageUrl: questionData.imageUrl || null,
@@ -109,7 +68,7 @@ export async function createQuiz(data: {
     }
   }
 
-  return { id: quiz.quizId, code: quiz.code };
+  return { id: quiz.quizId };
 }
 
 export async function getUserQuizzes() {
@@ -125,7 +84,7 @@ export async function getUserQuizzes() {
 }
 
 export async function updateQuiz(
-  quizId: number,
+  quizId: string,
   data: {
     title: string;
     description?: string;
@@ -192,7 +151,6 @@ export async function updateQuiz(
   for (const questionData of validated.questions) {
     const [question] = await db.insert(questions).values({
       quizId,
-      roundId: null, // No rounds support
       type: questionData.type,
       text: questionData.text,
       imageUrl: questionData.imageUrl || null,
@@ -212,5 +170,78 @@ export async function updateQuiz(
     }
   }
 
-  return { id: quizId, code: existingQuiz.code };
+  return { id: quizId };
+}
+
+export async function getQuizById(quizId: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!quizId || typeof quizId !== 'string') {
+    throw new Error('Invalid quiz ID');
+  }
+
+  const quiz = await db.query.quizzes.findFirst({
+    where: eq(quizzes.quizId, quizId),
+    with: {
+      questions: {
+        with: {
+          options: true,
+        },
+        orderBy: (questions, { asc }) => [asc(questions.order)],
+      },
+    },
+  });
+
+  if (!quiz) {
+    throw new Error('Quiz not found');
+  }
+
+  // Verify user has permission to view this quiz
+  if (quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  // Sort options manually since orderBy in nested relations can be problematic
+  const quizWithSortedOptions = {
+    ...quiz,
+    questions: quiz.questions?.map((q) => ({
+      ...q,
+      options: q.options && Array.isArray(q.options) 
+        ? q.options.sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [],
+    })) || [],
+  };
+
+  return quizWithSortedOptions;
+}
+
+export async function deleteQuiz(quizId: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!quizId || typeof quizId !== 'string') {
+    throw new Error('Invalid quiz ID');
+  }
+
+  const quiz = await db.query.quizzes.findFirst({
+    where: eq(quizzes.quizId, quizId),
+  });
+
+  if (!quiz) {
+    throw new Error('Quiz not found');
+  }
+
+  if (quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  // Delete the quiz (cascade will handle related records)
+  await db.delete(quizzes).where(eq(quizzes.quizId, quizId));
+
+  return { success: true };
 }

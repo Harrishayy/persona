@@ -6,7 +6,7 @@ import { quizSessions, participants, quizzes } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { generateUniqueCode } from '@/lib/utils/code-generator';
 
-export async function createSession(quizId: number) {
+export async function createSession(quizId: string) {
   const { user } = await withAuth();
   if (!user) {
     throw new Error('Unauthorized');
@@ -108,7 +108,7 @@ export async function startSession(code: string) {
   return updated;
 }
 
-export async function updateSessionQuestion(code: string, questionId: number | null) {
+export async function updateSessionQuestion(code: string, questionId: string | null) {
   const { user } = await withAuth();
   if (!user) {
     throw new Error('Unauthorized');
