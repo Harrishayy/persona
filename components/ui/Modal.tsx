@@ -3,6 +3,7 @@
 import { ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { ColorVariant, getColorHex } from '@/lib/utils/colors';
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface ModalProps {
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showCloseButton?: boolean;
-  color?: 'purple' | 'pink' | 'blue' | 'yellow' | 'green' | 'orange';
+  color?: ColorVariant;
 }
 
 export function Modal({
@@ -43,15 +44,6 @@ export function Modal({
     xl: 'max-w-4xl',
   };
 
-  const colorMap = {
-    purple: 'bg-[#A78BFA] text-[#1F2937]',
-    pink: 'bg-[#F0A4D0] text-[#1F2937]',
-    blue: 'bg-[#93C5FD] text-[#1F2937]',
-    yellow: 'bg-[#FDE68A] text-[#1F2937]',
-    green: 'bg-[#86EFAC] text-[#1F2937]',
-    orange: 'bg-[#FDBA74] text-[#1F2937]',
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -60,12 +52,12 @@ export function Modal({
       <div className="fixed inset-0 bg-black/60" />
       <div
         className={cn(
-          'relative z-50 w-full border-4 border-[#1F2937]',
-          colorMap[color],
+          'relative z-50 w-full border-4 border-[#1F2937] text-[#1F2937]',
           'animate-in fade-in zoom-in-95 duration-200',
           'colorblock-shadow-lg',
           sizes[size]
         )}
+        style={{ backgroundColor: getColorHex(color) }}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (

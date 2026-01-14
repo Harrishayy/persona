@@ -3,13 +3,25 @@
  * Optional fields use `undefined` instead of `null`
  */
 
-import type { QuestionType, QuizStatus, SessionStatus } from './database';
+import type { QuestionType, QuizStatus, SessionStatus, GameMode } from './database';
+
+export type { GameMode };
 
 export interface QuestionOption {
   id?: number;
   text: string;
   isCorrect: boolean;
   order: number;
+}
+
+export interface Round {
+  id?: number;
+  quizId?: number;
+  gameMode: GameMode;
+  order: number;
+  title?: string;
+  description?: string;
+  questions?: Question[];
 }
 
 export interface Question {
@@ -19,6 +31,7 @@ export interface Question {
   imageUrl?: string;
   order: number;
   timeLimit?: number;
+  roundId?: number;
   options?: QuestionOption[];
 }
 
@@ -29,7 +42,12 @@ export interface Quiz {
   hostId: string;
   code: string;
   status: QuizStatus;
+  imageUrl?: string;
+  emoji?: string;
+  isPublic?: boolean;
+  gameMode?: GameMode;
   questions?: Question[];
+  rounds?: Round[];
   createdAt?: Date;
   updatedAt?: Date;
 }

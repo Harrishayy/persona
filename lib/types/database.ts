@@ -6,6 +6,7 @@
 export type QuestionType = 'multiple_choice' | 'true_false' | 'text_input' | 'image';
 export type QuizStatus = 'draft' | 'published' | 'archived';
 export type SessionStatus = 'waiting' | 'active' | 'finished';
+export type GameMode = 'standard' | 'quiplash' | 'fibbage' | 'rate_favourite_drawings' | 'custom';
 
 export interface DatabaseQuestionOption {
   id: number;
@@ -19,6 +20,7 @@ export interface DatabaseQuestionOption {
 export interface DatabaseQuestion {
   id: number;
   quizId: number;
+  roundId: number | null;
   type: QuestionType;
   text: string;
   imageUrl: string | null;
@@ -28,6 +30,17 @@ export interface DatabaseQuestion {
   options?: DatabaseQuestionOption[];
 }
 
+export interface DatabaseRound {
+  id: number;
+  quizId: number;
+  gameMode: string;
+  order: number;
+  title: string | null;
+  description: string | null;
+  createdAt: Date;
+  questions?: DatabaseQuestion[];
+}
+
 export interface DatabaseQuiz {
   id: number;
   title: string;
@@ -35,9 +48,15 @@ export interface DatabaseQuiz {
   hostId: string;
   code: string;
   status: string; // Database returns string, needs validation
+  imageUrl: string | null;
+  emoji: string | null;
+  isPublic: boolean;
+  gameMode: string;
+  draftData: unknown | null;
   createdAt: Date;
   updatedAt: Date;
   questions?: DatabaseQuestion[];
+  rounds?: DatabaseRound[];
 }
 
 export interface DatabaseParticipant {

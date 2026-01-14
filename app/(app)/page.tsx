@@ -3,8 +3,8 @@ import { withAuth, getSignUpUrl } from '@workos-inc/authkit-nextjs';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ColorblockTitle } from '@/components/ui/ColorblockTitle';
-import { Gamepad2, Plus, LogIn } from 'lucide-react';
-import { getUniqueColors } from '@/lib/utils/colors';
+import { Gamepad2, Plus, LogIn, List, User, ChartColumn, Settings } from 'lucide-react';
+import { getUniqueColors, hexColorsToVariants } from '@/lib/utils/colors';
 
 export default async function HomePage() {
   const { user } = await withAuth();
@@ -48,25 +48,21 @@ export default async function HomePage() {
     );
   }
     // Get unique colors for the cards
-    const uiColors = getUniqueColors(5);
-    
-    // Map colors to variants (simplified - you might want a more sophisticated mapping)
-    const colorToVariant: Record<string, 'purple' | 'pink' | 'blue' | 'yellow' | 'green' | 'orange' | 'red' | 'cyan'> = {
-      '#A78BFA': 'purple',
-      '#F0A4D0': 'pink',
-      '#93C5FD': 'blue',
-      '#FDE68A': 'yellow',
-      '#86EFAC': 'green',
-      '#FDBA74': 'orange',
-      '#FCA5A5': 'red',
-      '#67E8F9': 'cyan',
-    };
+    const uiColors = getUniqueColors(12);
+    const variants = hexColorsToVariants(uiColors);
 
-    const cardColor1 = colorToVariant[uiColors[0]] || 'pink';
-    const cardColor2 = colorToVariant[uiColors[1]] || 'blue';
-    const btnColor1 = colorToVariant[uiColors[2]] || 'yellow';
-    const btnColor2 = colorToVariant[uiColors[3]] || 'green';
-
+    const cardColor1 = variants[0] || 'pink';
+    const cardColor2 = variants[1] || 'blue';
+    const cardColor3 = variants[2] || 'yellow';
+    const cardColor4 = variants[3] || 'green';
+    const cardColor5 = variants[4] || 'orange';
+    const cardColor6 = variants[5] || 'red';
+    const btnColor1 = variants[6] || 'green';
+    const btnColor2 = variants[7] || 'orange';
+    const btnColor3 = variants[8] || 'purple';
+    const btnColor4 = variants[9] || 'red';
+    const btnColor5 = variants[10] || 'purple';
+    const btnColor6 = variants[11] || 'red';
   return (
     <div className="min-h-screen colorblock-bg-pattern p-4 py-12"
     >
@@ -76,17 +72,17 @@ export default async function HomePage() {
             Welcome back{user.firstName && `, ${user.firstName}`}!
           </h1>
           <p className="text-2xl font-bold text-[#1F2937] opacity-80">
-            Ready to quiz?
+            Ready to quiz? 
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
-          <Card variant={cardColor1} className="text-center">
-            <Gamepad2 className="w-14 h-14 mx-auto mb-5" />
+        <div className="grid md:grid-cols-2 gap-8 mb-8 items-stretch">
+          <Card variant={cardColor1} className="text-center flex flex-col">
+            <Gamepad2 className="w-14 h-14 mx-auto mb-5 flex-shrink-0" />
             <h2 className="text-3xl font-black mb-4">
               Join a Quiz
             </h2>
-            <p className="text-lg font-bold opacity-90 mb-8">
+            <p className="text-lg font-bold opacity-90 flex-grow mb-4">
               Enter the code to join a live quiz session
             </p>
             <Link href="/join">
@@ -96,19 +92,88 @@ export default async function HomePage() {
             </Link>
           </Card>
 
-          <Card variant={cardColor2} className="text-center">
-            <Plus className="w-14 h-14 mx-auto mb-5" />
+          <Card variant={cardColor2} className="text-center flex flex-col">
+            <Plus className="w-14 h-14 mx-auto mb-5 flex-shrink-0" />
             <h2 className="text-3xl font-black mb-4">
               Create a Quiz
             </h2>
-            <p className="text-lg font-bold opacity-90 mb-8">
+            <p className="text-lg font-bold opacity-90 flex-grow mb-4">
               Build your own quiz with templates and share it with friends
             </p>
-            <Link href="/create">
-              <Button color={btnColor2} className="w-full" size="lg">
-                Create Quiz
-              </Button>
-            </Link>
+            <div className="mt-auto pt-4">
+              <Link href="/create">
+                <Button color={btnColor2} className="w-full" size="lg">
+                  Create Quiz
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card variant={cardColor3} className="text-center flex flex-col">
+            <List className="w-14 h-14 mx-auto mb-5 flex-shrink-0" />
+            <h2 className="text-3xl font-black mb-4">
+              Find a Quiz
+            </h2>
+            <p className="text-lg font-bold opacity-90 flex-grow mb-4">
+              Find a quiz to join or create
+            </p>
+            <div className="mt-auto pt-4">
+              <Link href="/findquiz">
+                <Button color={btnColor3} className="w-full" size="lg">
+                  Find Quiz
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card variant={cardColor4} className="text-center flex flex-col">
+            <User className="w-14 h-14 mx-auto mb-5 flex-shrink-0" />
+            <h2 className="text-3xl font-black mb-4">
+              My Quizzes
+            </h2>
+            <p className="text-lg font-bold opacity-90 flex-grow mb-4">
+              View all my quizzes and manage them
+            </p>
+            <div className="mt-auto pt-4">
+              <Link href="/myquiz">
+                <Button color={btnColor4} className="w-full" size="lg">
+                  My Quizzes
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card variant={cardColor5} className="text-center flex flex-col">
+            <ChartColumn className="w-14 h-14 mx-auto mb-5 flex-shrink-0" />
+            <h2 className="text-3xl font-black mb-4">
+              My Stats
+            </h2>
+            <p className="text-lg font-bold opacity-90 flex-grow mb-4">
+              View all statistics of my quizzes and my performance
+            </p>
+            <div className="mt-auto pt-4">
+              <Link href="/stats">
+                <Button color={btnColor5} className="w-full" size="lg">
+                  My Stats
+                </Button>
+              </Link>
+            </div>
+          </Card>
+          <Card variant={cardColor6} className="text-center flex flex-col">
+            <Settings className="w-14 h-14 mx-auto mb-5 flex-shrink-0" />
+            <h2 className="text-3xl font-black mb-4">
+              Settings
+            </h2>
+            <p className="text-lg font-bold opacity-90 flex-grow mb-4">
+              View and edit your settings
+            </p>
+            <div className="mt-auto pt-4">
+              <Link href="/settings">
+                <Button color={btnColor6} className="w-full" size="lg">
+                  Settings
+                </Button>
+              </Link>
+            </div>
           </Card>
         </div>
       </div>

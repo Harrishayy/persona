@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 import { db } from '@/lib/db/connection';
-import { quizzes, questions, questionOptions } from '@/lib/db/schema';
+import { quizzes, questions, questionOptions, rounds } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { quizSchema } from '@/lib/utils/validation';
 import { generateUniqueCode } from '@/lib/utils/code-generator';
@@ -72,16 +72,45 @@ export async function POST(request: NextRequest) {
     // Create quiz
     const [quiz] = await db.insert(quizzes).values({
       title: validated.title,
-      description: validated.description,
+      description: validated.description || null,
       hostId: user.id,
       code,
       status: 'published',
+      imageUrl: validated.imageUrl || null,
+      emoji: validated.emoji || null,
+      isPublic: validated.isPublic || false,
+      gameMode: validated.gameMode || 'standard',
     }).returning();
+
+    // Create rounds if they exist
+    const roundIdMap = new Map<number, number>();
+    if (validated.rounds && validated.rounds.length > 0) {
+      for (const roundData of validated.rounds) {
+        const [round] = await db.insert(rounds).values({
+          quizId: quiz.quizId,
+          gameMode: roundData.gameMode,
+          order: roundData.order,
+          title: roundData.title || null,
+          description: roundData.description || null,
+        }).returning();
+        roundIdMap.set(roundData.order, round.roundId);
+      }
+    }
 
     // Create questions
     for (const questionData of validated.questions) {
+      let roundId: number | null = null;
+      if (questionData.roundId !== undefined) {
+        if (roundIdMap.has(questionData.roundId)) {
+          roundId = roundIdMap.get(questionData.roundId)!;
+        } else if (questionData.roundId > 0) {
+          roundId = questionData.roundId;
+        }
+      }
+
       const [question] = await db.insert(questions).values({
-        quizId: quiz.id,
+        quizId: quiz.quizId,
+        roundId,
         type: questionData.type,
         text: questionData.text,
         imageUrl: questionData.imageUrl || null,
@@ -93,7 +122,7 @@ export async function POST(request: NextRequest) {
       if (questionData.options && questionData.options.length > 0) {
         await db.insert(questionOptions).values(
           questionData.options.map((opt) => ({
-            questionId: question.id,
+            questionId: question.questionId,
             text: opt.text,
             isCorrect: opt.isCorrect,
             order: opt.order,

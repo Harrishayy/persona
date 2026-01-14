@@ -1,9 +1,10 @@
 import { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils/cn';
+import { ColorVariant, getColorHex, COLOR_DEFINITIONS } from '@/lib/utils/colors';
 
 interface LoadingSpinnerProps extends HTMLAttributes<HTMLDivElement> {
   size?: 'sm' | 'md' | 'lg';
-  color?: 'purple' | 'pink' | 'blue' | 'green';
+  color?: ColorVariant;
 }
 
 export function LoadingSpinner({ size = 'md', color = 'purple', className, ...props }: LoadingSpinnerProps) {
@@ -13,21 +14,18 @@ export function LoadingSpinner({ size = 'md', color = 'purple', className, ...pr
     lg: 'w-12 h-12 border-4',
   };
 
-  const colors = {
-    purple: 'border-[#A78BFA]',
-    pink: 'border-[#F0A4D0]',
-    blue: 'border-[#93C5FD]',
-    green: 'border-[#86EFAC]',
-  };
+  const colorHex = getColorHex(color);
+  const colorClass = `border-[${colorHex}]`;
 
   return (
     <div
       className={cn(
         'animate-spin rounded-full border-t-transparent border-4',
         sizes[size],
-        colors[color],
+        colorClass,
         className
       )}
+      style={{ borderColor: colorHex }}
       {...props}
     />
   );

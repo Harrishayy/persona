@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import type { QuizSession, Question } from '@/lib/types';
 import { QuestionCard } from '@/components/ui/QuestionCard';
-import { OptionButton } from '@/components/ui/OptionButton';
+import { EmojiOptionButton } from '@/components/ui/EmojiOptionButton';
 import { Input } from '@/components/ui/Input';
+import { getEmojiForOption } from '@/lib/utils/emoji-assignment';
 import { Button } from '@/components/ui/Button';
 import { Timer } from '@/components/ui/Timer';
 import { Card } from '@/components/ui/Card';
@@ -12,6 +13,7 @@ import { ScoreDisplay } from '@/components/ui/ScoreDisplay';
 import { ParticipantList } from '@/components/ui/ParticipantList';
 import { CheckCircle } from 'lucide-react';
 import { getErrorMessage } from '@/lib/types/errors';
+import { useToast } from '@/lib/hooks/useToast';
 
 interface PlayerViewProps {
   session: QuizSession;
@@ -24,6 +26,7 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
   const [textAnswer, setTextAnswer] = useState('');
   const [hasAnswered, setHasAnswered] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
 
   const currentQuestion = session.quiz?.questions?.find(
     (q) => q.id === session.currentQuestionId
@@ -47,12 +50,12 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
 
     if (currentQuestion.type === 'multiple_choice' || currentQuestion.type === 'true_false') {
       if (selectedAnswer === null) {
-        alert('Please select an answer');
+        showToast('Please select an answer', 'warning');
         return;
       }
     } else if (currentQuestion.type === 'text_input') {
       if (!textAnswer.trim()) {
-        alert('Please enter an answer');
+        showToast('Please enter an answer', 'warning');
         return;
       }
     }
@@ -81,7 +84,7 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
       setHasAnswered(true);
       onUpdate();
     } catch (error: unknown) {
-      alert(getErrorMessage(error) || 'Failed to submit answer');
+      showToast(getErrorMessage(error) || 'Failed to submit answer', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -174,11 +177,11 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
           <>
             {(currentQuestion.type === 'multiple_choice' || currentQuestion.type === 'true_false') &&
               currentQuestion.options && (
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
                   {currentQuestion.options.map((option, idx) => (
-                    <OptionButton
+                    <EmojiOptionButton
                       key={idx}
-                      text={option.text}
+                      emoji={getEmojiForOption(idx)}
                       isSelected={selectedAnswer === option.id}
                       onClick={() => setSelectedAnswer(option.id || null)}
                       colorIndex={idx}

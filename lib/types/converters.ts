@@ -99,10 +99,14 @@ export function convertParticipant(participant: DatabaseParticipant): Participan
 
 /**
  * Convert database quiz session to app type
+ * Handles both sessionId (from Drizzle) and id (from type definition)
  */
-export function convertQuizSession(session: DatabaseQuizSession): QuizSession {
+export function convertQuizSession(session: DatabaseQuizSession | any): QuizSession {
+  // Drizzle returns sessionId, but type definition uses id
+  const sessionId = (session as any).sessionId || session.id;
+  
   return {
-    id: session.id,
+    id: sessionId,
     quizId: session.quizId,
     code: session.code,
     status: validateSessionStatus(session.status),

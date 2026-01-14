@@ -4,19 +4,18 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import type { QuizTemplate } from '@/lib/types';
 import { Sparkles } from 'lucide-react';
+import { ALL_VARIANTS, ColorVariant } from '@/lib/utils/colors';
 
 interface TemplateSelectorProps {
   templates: QuizTemplate[];
   onSelect: (template: QuizTemplate) => void;
 }
 
-const colorVariants = ['purple', 'pink', 'blue', 'green', 'yellow', 'orange'] as const;
-
 export function TemplateSelector({ templates, onSelect }: TemplateSelectorProps) {
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
       {templates.map((template, index) => {
-        const variant = colorVariants[index % colorVariants.length] || 'purple';
+        const variant = (ALL_VARIANTS[index % ALL_VARIANTS.length] || 'purple') as ColorVariant;
         return (
           <Card
             key={template.id}

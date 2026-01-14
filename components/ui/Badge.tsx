@@ -1,5 +1,6 @@
 import { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils/cn';
+import { getColorHex } from '@/lib/utils/colors';
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   children: ReactNode;
@@ -7,15 +8,17 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export function Badge({ children, variant = 'default', size = 'md', className, ...props }: BadgeProps) {
-  const variants = {
-    default: 'bg-[#1F2937] text-white border-2 border-[#1F2937]',
-    success: 'bg-[#86EFAC] text-[#1F2937] border-2 border-[#1F2937]',
-    warning: 'bg-[#FDE68A] text-[#1F2937] border-2 border-[#1F2937]',
-    error: 'bg-[#FCA5A5] text-[#1F2937] border-2 border-[#1F2937]',
-    info: 'bg-[#93C5FD] text-[#1F2937] border-2 border-[#1F2937]',
-    purple: 'bg-[#A78BFA] text-[#1F2937] border-2 border-[#1F2937]',
-    pink: 'bg-[#F0A4D0] text-[#1F2937] border-2 border-[#1F2937]',
+export function Badge({ children, variant = 'default', size = 'md', className, style, ...props }: BadgeProps) {
+  const baseStyles = 'text-[#1F2937] border-2 border-[#1F2937]';
+  
+  const variants: Record<string, { className: string; style?: React.CSSProperties }> = {
+    default: { className: 'bg-[#1F2937] text-white border-[#1F2937]' },
+    success: { className: `bg-[${getColorHex('green')}] ${baseStyles}` },
+    warning: { className: `bg-[${getColorHex('yellow')}] ${baseStyles}` },
+    error: { className: `bg-[${getColorHex('red')}] ${baseStyles}` },
+    info: { className: `bg-[${getColorHex('blue')}] ${baseStyles}` },
+    purple: { className: baseStyles, style: { backgroundColor: getColorHex('purple') } },
+    pink: { className: baseStyles, style: { backgroundColor: getColorHex('pink') } },
   };
 
   const sizes = {
@@ -24,14 +27,17 @@ export function Badge({ children, variant = 'default', size = 'md', className, .
     lg: 'px-4 py-2 text-base',
   };
 
+  const variantStyles = variants[variant] || variants.default;
+
   return (
     <span
       className={cn(
         'inline-flex items-center font-bold',
-        variants[variant],
+        variantStyles.className,
         sizes[size],
         className
       )}
+      style={{ ...variantStyles.style, ...style }}
       {...props}
     >
       {children}

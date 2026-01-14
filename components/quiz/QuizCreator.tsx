@@ -1,28 +1,59 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Question, QuizTemplate } from '@/lib/utils/types';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import type { Question, QuizTemplate } from '@/lib/types/app';
+import type { GameMode, DatabaseQuiz } from '@/lib/types/database';
 import { Button } from '@/components/ui/Button';
-import { QuestionEditor } from './QuestionEditor';
-import { createQuiz } from '@/app/(app)/actions/quiz';
-import { Plus } from 'lucide-react';
+import { QuizHeader } from './QuizHeader';
+import { ViewModeToggle } from './ViewModeToggle';
+import { QuestionList } from './QuestionList';
+import { PreviewPanel } from './PreviewPanel';
+import { createQuiz, updateQuiz } from '@/app/(app)/actions/quiz';
 import { getErrorMessage } from '@/lib/types/errors';
+import { cn } from '@/lib/utils/cn';
+import { useToast } from '@/lib/hooks/useToast';
+import { convertQuestion } from '@/lib/types/converters';
 
 interface QuizCreatorProps {
   initialTemplate?: QuizTemplate | null;
+  initialQuiz?: DatabaseQuiz | null;
 }
 
-export function QuizCreator({ initialTemplate }: QuizCreatorProps) {
+export function QuizCreator({ initialTemplate, initialQuiz }: QuizCreatorProps) {
   const router = useRouter();
-  const [title, setTitle] = useState(initialTemplate?.name || '');
-  const [description, setDescription] = useState(initialTemplate?.description || '');
-  const [questions, setQuestions] = useState<Question[]>(
-    initialTemplate?.questions || [
+  const { showToast } = useToast();
+  const isEditing = !!initialQuiz;
+
+  // Quiz metadata
+  const [title, setTitle] = useState(
+    initialQuiz?.title || initialTemplate?.name || ''
+  );
+  const [description, setDescription] = useState(
+    initialQuiz?.description || initialTemplate?.description || ''
+  );
+  const [imageUrl, setImageUrl] = useState<string | undefined>(
+    initialQuiz?.imageUrl || undefined
+  );
+  const [emoji, setEmoji] = useState<string | undefined>(
+    initialQuiz?.emoji || undefined
+  );
+  const [isPublic, setIsPublic] = useState(initialQuiz?.isPublic || false);
+  const [gameMode, setGameMode] = useState<GameMode>(
+    (initialQuiz?.gameMode as GameMode) || 'standard'
+  );
+
+  // Questions
+  const [questions, setQuestions] = useState<Question[]>(() => {
+    if (initialQuiz?.questions && initialQuiz.questions.length > 0) {
+      return initialQuiz.questions.map(convertQuestion);
+    }
+    if (initialTemplate?.questions && initialTemplate.questions.length > 0) {
+      return initialTemplate.questions;
+    }
+    return [
       {
-        type: 'multiple_choice',
+        type: 'multiple_choice' as const,
         text: '',
         order: 0,
         options: [
@@ -30,9 +61,14 @@ export function QuizCreator({ initialTemplate }: QuizCreatorProps) {
           { text: '', isCorrect: false, order: 1 },
         ],
       },
-    ]
-  );
+    ];
+  });
+
+  // UI state
+  const [isDetailedView, setIsDetailedView] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState<number | null>(0);
+
 
   const addQuestion = () => {
     setQuestions([
@@ -61,88 +97,141 @@ export function QuizCreator({ initialTemplate }: QuizCreatorProps) {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      alert('Please enter a quiz title');
+      showToast('Please enter a quiz title', 'warning');
       return;
     }
 
     if (questions.length === 0) {
-      alert('Please add at least one question');
+      showToast('Please add at least one question', 'warning');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await createQuiz({
-        title,
-        description,
-        questions: questions.map((q, i) => ({
-          ...q,
-          order: i,
-        })),
-      });
-      router.push(`/host/${result.code}`);
+      if (isEditing && initialQuiz) {
+        // Database returns quizId, not id
+        const quizId = (initialQuiz as any).quizId || (initialQuiz as any).id;
+        if (!quizId) {
+          showToast('Invalid quiz data', 'error');
+          return;
+        }
+        const result = await updateQuiz(quizId, {
+          title,
+          description,
+          imageUrl,
+          emoji,
+          isPublic,
+          gameMode,
+          questions: questions.map((q, i) => ({
+            ...q,
+            order: i,
+          })),
+        });
+        showToast('Quiz updated successfully', 'success');
+        router.push(`/host/${result.code}`);
+      } else {
+        const result = await createQuiz({
+          title,
+          description,
+          imageUrl,
+          emoji,
+          isPublic,
+          gameMode,
+          questions: questions.map((q, i) => ({
+            ...q,
+            order: i,
+          })),
+        });
+        showToast('Quiz created successfully', 'success');
+        router.push(`/host/${result.code}`);
+      }
     } catch (error: unknown) {
-      alert(getErrorMessage(error) || 'Failed to create quiz');
+      showToast(
+        getErrorMessage(error) || 
+        (isEditing ? 'Failed to update quiz' : 'Failed to create quiz'),
+        'error'
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const previewQuiz = {
+    title,
+    description,
+    imageUrl,
+    emoji,
+    gameMode,
+    questions,
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <Card variant="purple" className="mb-8">
-        <h1 className="text-4xl font-black mb-6">
-          Create Your Quiz
-        </h1>
-        <div className="space-y-4">
-          <Input
-            label="Quiz Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter quiz title..."
-          />
-          <Input
-            label="Description (Optional)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe your quiz..."
-          />
-        </div>
-      </Card>
+    <div className={cn(
+      'space-y-6',
+      isDetailedView ? 'max-w-[95vw] mx-auto px-4' : 'max-w-4xl mx-auto'
+    )}>
+      {/* View Mode Toggle */}
+      <ViewModeToggle isDetailed={isDetailedView} onToggle={setIsDetailedView} />
 
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-[#1F2937]">
-            Questions ({questions.length})
-          </h2>
-          <Button variant="secondary" onClick={addQuestion}>
-            <Plus className="w-5 h-5 mr-2" />
-            Add Question
-          </Button>
-        </div>
-        {questions.map((question, index) => (
-          <QuestionEditor
-            key={index}
-            question={question}
-            index={index}
-            onChange={(q) => updateQuestion(index, q)}
-            onDelete={() => deleteQuestion(index)}
-          />
-        ))}
-      </div>
+      <div className={cn('space-y-6', isDetailedView && 'grid grid-cols-2 gap-6 items-start')}>
+        {/* Left Column - Editor */}
+        <div className={cn(
+          isDetailedView && 'overflow-y-auto max-h-[calc(100vh-200px)]'
+        )}>
+          <div className={cn(
+            'space-y-6',
+            isDetailedView && 'p-4 rounded-lg bg-[#F3F4F6]'
+          )}>
+            <QuizHeader
+              title={title}
+              description={description}
+              imageUrl={imageUrl}
+              emoji={emoji}
+              isPublic={isPublic}
+              gameMode={gameMode}
+              hasRounds={false}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onImageUrlChange={setImageUrl}
+              onEmojiChange={setEmoji}
+              onPublicChange={setIsPublic}
+              onGameModeChange={setGameMode}
+            />
 
-      <div className="flex justify-end gap-4 pb-8">
-        <Button variant="outline" onClick={() => router.back()}>
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          onClick={handleSubmit}
-          isLoading={isSubmitting}
-          size="lg"
-        >
-          Create Quiz
-        </Button>
+            <QuestionList
+              questions={questions}
+              onQuestionsChange={setQuestions}
+              onAddQuestion={addQuestion}
+              onUpdateQuestion={updateQuestion}
+              onDeleteQuestion={deleteQuestion}
+              onActiveQuestionChange={setActiveQuestionIndex}
+            />
+
+            <div className="flex justify-end gap-4 pb-8">
+              <Button variant="outline" onClick={() => router.back()}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSubmit}
+                isLoading={isSubmitting}
+                size="lg"
+              >
+                {isEditing ? 'Update Quiz' : 'Create Quiz'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Preview (only in detailed view) */}
+        {isDetailedView && (
+          <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
+            <PreviewPanel 
+              quiz={previewQuiz} 
+              activeQuestionIndex={activeQuestionIndex}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

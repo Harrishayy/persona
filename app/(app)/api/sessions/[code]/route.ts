@@ -3,6 +3,8 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 import { db } from '@/lib/db/connection';
 import { quizSessions, participants } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { convertQuizSession } from '@/lib/types/converters';
+import type { DatabaseQuizSession } from '@/lib/types';
 
 export async function GET(
   request: NextRequest,
@@ -32,7 +34,9 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    return NextResponse.json(session);
+    // Convert database session to app type
+    const convertedSession = convertQuizSession(session as DatabaseQuizSession);
+    return NextResponse.json(convertedSession);
   } catch (error) {
     console.error('Error fetching session:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -108,9 +112,10 @@ export async function POST(
     }
 
     // Check if already joined
+    const sessionId = (session as any).sessionId || (session as any).id;
     const existing = await db.query.participants.findFirst({
       where: (participants, { and, eq }) => and(
-        eq(participants.sessionId, session.id),
+        eq(participants.sessionId, sessionId),
         eq(participants.userId, user.id)
       ),
     });
@@ -120,7 +125,7 @@ export async function POST(
     }
 
     const [participant] = await db.insert(participants).values({
-      sessionId: session.id,
+      sessionId: sessionId,
       userId: user.id,
       userName: userName || user.firstName || user.email || undefined,
     }).returning();

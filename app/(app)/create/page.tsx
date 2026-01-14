@@ -11,9 +11,7 @@ export default async function CreatePage() {
 
   return (
     <div className="min-h-screen colorblock-bg-pattern p-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <CreatePageClient />
-      </div>
+      <CreatePageClient />
     </div>
   );
 }

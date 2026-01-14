@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Question, QuestionType } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { OptionButton } from '@/components/ui/OptionButton';
 import { Trash2, Plus, GripVertical } from 'lucide-react';
@@ -13,10 +14,18 @@ interface QuestionEditorProps {
   index: number;
   onChange: (question: Question) => void;
   onDelete: () => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+  rounds?: Array<{ id?: number; order: number; title?: string }>;
+  hideHeader?: boolean;
 }
 
-export function QuestionEditor({ question, index, onChange, onDelete }: QuestionEditorProps) {
+export function QuestionEditor({ question, index, onChange, onDelete, dragHandleProps, rounds, hideHeader = false }: QuestionEditorProps) {
   const [localQuestion, setLocalQuestion] = useState(question);
+
+  // Update local state when question prop changes (e.g., after reordering)
+  useEffect(() => {
+    setLocalQuestion(question);
+  }, [question]);
 
   const updateQuestion = (updates: Partial<Question>) => {
     const updated = { ...localQuestion, ...updates };
@@ -47,43 +56,44 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
     updateQuestion({ options: newOptions });
   };
 
-  return (
-    <Card className="mb-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <GripVertical className="w-5 h-5 text-[#6B7280]" />
-          <h3 className="text-lg font-bold text-[#1F2937]">
-            Question {index + 1}
-          </h3>
-        </div>
-        <Button variant="danger" size="sm" onClick={onDelete}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-bold text-[#1F2937] mb-2">
-            Question Type
-          </label>
-          <select
-            value={localQuestion.type}
-            onChange={(e) => {
-              const newType = e.target.value as QuestionType;
-              const needsOptions = newType === 'multiple_choice' || newType === 'true_false';
-              updateQuestion({
-                type: newType,
-                options: needsOptions ? localQuestion.options || [] : undefined,
-              });
+  const content = (
+    <div className="space-y-4">
+        {rounds && rounds.length > 0 && (
+          <Select
+            label="Assign to Round (Optional)"
+            value={localQuestion.roundId !== undefined ? localQuestion.roundId.toString() : ''}
+            onChange={(value) => {
+              const roundId = value ? parseInt(value) : undefined;
+              updateQuestion({ roundId });
             }}
-            className="w-full px-4 py-3 border-4 border-[#1F2937] bg-white text-[#1F2937] font-medium focus:outline-none focus:ring-4 focus:ring-[#A78BFA] focus:ring-offset-2 transition-all duration-200"
-          >
-            <option value="multiple_choice">Multiple Choice</option>
-            <option value="true_false">True/False</option>
-            <option value="text_input">Text Input</option>
-            <option value="image">Image Question</option>
-          </select>
-        </div>
+            options={[
+              { value: '', label: 'No Round (Quiz Level)' },
+              ...rounds.map((round, index) => ({
+                value: round.order.toString(),
+                label: round.title || `Round ${round.order + 1}`,
+              })),
+            ]}
+          />
+        )}
+
+        <Select
+          label="Question Type"
+          value={localQuestion.type}
+          onChange={(value) => {
+            const newType = value as QuestionType;
+            const needsOptions = newType === 'multiple_choice' || newType === 'true_false';
+            updateQuestion({
+              type: newType,
+              options: needsOptions ? localQuestion.options || [] : undefined,
+            });
+          }}
+          options={[
+            { value: 'multiple_choice', label: 'Multiple Choice' },
+            { value: 'true_false', label: 'True/False' },
+            { value: 'text_input', label: 'Text Input' },
+            { value: 'image', label: 'Image Question' },
+          ]}
+        />
 
         <Input
           label="Question Text"
@@ -152,6 +162,26 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
           placeholder="Optional"
         />
       </div>
+  );
+
+  if (hideHeader) {
+    return content;
+  }
+
+  return (
+    <Card className="mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2" {...dragHandleProps}>
+          <GripVertical className="w-5 h-5 text-[#6B7280] cursor-grab active:cursor-grabbing" />
+          <h3 className="text-lg font-bold text-[#1F2937]">
+            Question {index + 1}
+          </h3>
+        </div>
+        <Button variant="danger" size="sm" onClick={onDelete}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+      {content}
     </Card>
   );
 }

@@ -19,16 +19,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Quiz ID is required' }, { status: 400 });
     }
 
-    // Verify quiz ownership
+    // Verify quiz exists and is available for hosting
     const quiz = await db.query.quizzes.findFirst({
-      where: eq(quizzes.id, quizId),
+      where: eq(quizzes.quizId, quizId),
     });
 
     if (!quiz) {
       return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
     }
 
-    if (quiz.hostId !== user.id) {
+    // Allow hosting if user owns the quiz OR if quiz is public
+    if (quiz.hostId !== user.id && !quiz.isPublic) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     }).returning();
 
     const createdSession = await db.query.quizSessions.findFirst({
-      where: eq(quizSessions.id, session.id),
+      where: eq(quizSessions.sessionId, session.sessionId),
       with: {
         quiz: {
           with: {

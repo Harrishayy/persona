@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Card } from './Card';
+import { ALL_VARIANTS, ColorVariant } from '@/lib/utils/colors';
 
 interface QuestionCardProps {
   questionNumber?: number;
@@ -10,8 +11,6 @@ interface QuestionCardProps {
   colorIndex?: number;
 }
 
-const colorVariants = ['purple', 'pink', 'blue', 'green', 'yellow', 'orange'] as const;
-
 export function QuestionCard({
   questionNumber,
   totalQuestions,
@@ -20,7 +19,7 @@ export function QuestionCard({
   children,
   colorIndex = 0,
 }: QuestionCardProps) {
-  const variant = colorVariants[colorIndex % colorVariants.length] || 'purple';
+  const variant = (ALL_VARIANTS[colorIndex % ALL_VARIANTS.length] || 'purple') as ColorVariant;
   
   return (
     <Card variant={variant} className="w-full">

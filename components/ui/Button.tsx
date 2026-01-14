@@ -1,12 +1,20 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react';
+'use client';
+
+import { ButtonHTMLAttributes, ReactNode, CSSProperties, useState } from 'react';
 import { cn } from '@/lib/utils/cn';
+import { ColorVariant, getColorHex, getColorHover } from '@/lib/utils/colors';
+import { useColorblockRotation } from '@/lib/hooks/useColorblockRotation';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'warning' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   children: ReactNode;
-  color?: 'purple' | 'pink' | 'blue' | 'yellow' | 'green' | 'orange' | 'red' | 'cyan';
+  color?: ColorVariant;
+  /**
+   * Enable colorblock rotation effect on hover (default: true)
+   */
+  enableRotation?: boolean;
 }
 
 export function Button({
@@ -17,17 +25,29 @@ export function Button({
   disabled,
   children,
   color,
+  style,
+  enableRotation = true,
+  onMouseEnter,
+  onMouseLeave,
+  onMouseDown,
+  onMouseUp,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:translate-x-1 active:translate-y-1 active:shadow-none hover:scale-105';
+  const [isHovered, setIsHovered] = useState(false);
+  const rotation = useColorblockRotation({ 
+    enabled: enableRotation,
+    initialRotation: 0, // Start with no rotation
+  });
   
-  const variants = {
-    primary: 'bg-[#A78BFA] text-[#1F2937] hover:bg-[#8B5CF6] colorblock-shadow hover:shadow-lg',
-    secondary: 'bg-[#93C5FD] text-[#1F2937] hover:bg-[#60A5FA] colorblock-shadow hover:shadow-lg',
-    danger: 'bg-[#FCA5A5] text-[#1F2937] hover:bg-[#F87171] colorblock-shadow hover:shadow-lg',
-    success: 'bg-[#86EFAC] text-[#1F2937] hover:bg-[#4ADE80] colorblock-shadow hover:shadow-lg',
-    warning: 'bg-[#FDE68A] text-[#1F2937] hover:bg-[#FCD34D] colorblock-shadow hover:shadow-lg',
-    outline: 'bg-white border-4 border-[#1F2937] text-[#1F2937] hover:bg-[#1F2937] hover:text-white colorblock-shadow',
+  const baseStyles = 'font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-[#1F2937] colorblock-shadow hover:shadow-lg';
+  
+  const variantColors: Record<string, { bg: string; hover: string }> = {
+    primary: { bg: '#A78BFA', hover: '#8B5CF6' },
+    secondary: { bg: '#93C5FD', hover: '#60A5FA' },
+    danger: { bg: '#FCA5A5', hover: '#F87171' },
+    success: { bg: '#86EFAC', hover: '#4ADE80' },
+    warning: { bg: '#FDE68A', hover: '#FCD34D' },
+    outline: { bg: 'white', hover: '#1F2937' },
   };
 
   const sizes = {
@@ -36,28 +56,49 @@ export function Button({
     lg: 'px-8 py-4 text-lg',
   };
 
-  const colors = {
-    purple: 'bg-[#A78BFA] text-[#1F2937] hover:bg-[#8B5CF6] colorblock-shadow hover:shadow-lg',
-    pink: 'bg-[#F0A4D0] text-[#1F2937] hover:bg-[#F0A4D0] colorblock-shadow hover:shadow-lg',
-    blue: 'bg-[#93C5FD] text-[#1F2937] hover:bg-[#60A5FA] colorblock-shadow hover:shadow-lg',
-    yellow: 'bg-[#FDE68A] text-[#1F2937] hover:bg-[#FCD34D] colorblock-shadow hover:shadow-lg',
-    green: 'bg-[#86EFAC] text-[#1F2937] hover:bg-[#4ADE80] colorblock-shadow hover:shadow-lg',
-    orange: 'bg-[#FDBA74] text-[#1F2937] hover:bg-[#FDBA74] colorblock-shadow hover:shadow-lg',
-    red: 'bg-[#FCA5A5] text-[#1F2937] hover:bg-[#F87171] colorblock-shadow hover:shadow-lg',
-    cyan: 'bg-[#67E8F9] text-[#1F2937] hover:bg-[#67E8F9] colorblock-shadow hover:shadow-lg',
+  const isOutline = variant === 'outline';
+  const colorConfig = color 
+    ? { bg: getColorHex(color), hover: getColorHover(color) }
+    : variantColors[variant];
+
+  const buttonStyle: CSSProperties = {
+    backgroundColor: isHovered && !isOutline ? colorConfig.hover : colorConfig.bg,
+    ...(isOutline && { border: '4px solid #1F2937' }),
+    ...(isHovered && isOutline && { backgroundColor: '#1F2937', color: 'white' }),
+    ...(rotation.transform && { transform: rotation.transform }),
+    ...(rotation.isActive && { boxShadow: 'none' }),
+    ...style,
   };
-  
 
   return (
     <button
       className={cn(
         baseStyles,
-        color ? colors[color] : variants[variant],
         sizes[size],
         'rounded-lg flex items-center justify-center',
+        !enableRotation && 'hover:scale-105', // Only use scale if rotation is disabled
         className
       )}
+      style={buttonStyle}
       disabled={disabled || isLoading}
+      onMouseEnter={(e) => {
+        setIsHovered(true);
+        rotation.handleMouseEnter();
+        onMouseEnter?.(e);
+      }}
+      onMouseLeave={(e) => {
+        setIsHovered(false);
+        rotation.handleMouseLeave();
+        onMouseLeave?.(e);
+      }}
+      onMouseDown={(e) => {
+        rotation.handleMouseDown();
+        onMouseDown?.(e);
+      }}
+      onMouseUp={(e) => {
+        rotation.handleMouseUp();
+        onMouseUp?.(e);
+      }}
       {...props}
     >
       {isLoading ? (

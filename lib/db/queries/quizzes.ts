@@ -1,10 +1,10 @@
 import { db } from '../connection';
 import { quizzes, questions, questionOptions } from '../schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and, or, ilike } from 'drizzle-orm';
 
 export async function getQuizById(id: number) {
   const quiz = await db.query.quizzes.findFirst({
-    where: eq(quizzes.id, id),
+    where: eq(quizzes.quizId, id),
     with: {
       questions: {
         with: {
@@ -57,11 +57,61 @@ export async function updateQuiz(id: number, data: {
   const [quiz] = await db
     .update(quizzes)
     .set({ ...data, updatedAt: new Date() })
-    .where(eq(quizzes.id, id))
+    .where(eq(quizzes.quizId, id))
     .returning();
   return quiz;
 }
 
 export async function deleteQuiz(id: number) {
-  await db.delete(quizzes).where(eq(quizzes.id, id));
+  await db.delete(quizzes).where(eq(quizzes.quizId, id));
+}
+
+export async function getPublishedQuizzes(search?: string) {
+  const conditions = [
+    eq(quizzes.status, 'published'),
+    eq(quizzes.isPublic, true)
+  ];
+  
+  if (search) {
+    conditions.push(
+      or(
+        ilike(quizzes.title, `%${search}%`),
+        ilike(quizzes.description, `%${search}%`)
+      )!
+    );
+  }
+
+  return await db.query.quizzes.findMany({
+    where: and(...conditions),
+    orderBy: [desc(quizzes.createdAt)],
+    limit: 50,
+  });
+}
+
+export async function getQuizStats(hostId: string) {
+  const userQuizzes = await db.query.quizzes.findMany({
+    where: eq(quizzes.hostId, hostId),
+    with: {
+      sessions: {
+        with: {
+          participants: true,
+        },
+      },
+    },
+  });
+
+  const totalQuizzes = userQuizzes.length;
+  const totalSessions = userQuizzes.reduce((sum, quiz) => sum + quiz.sessions.length, 0);
+  const totalParticipants = userQuizzes.reduce(
+    (sum, quiz) => sum + quiz.sessions.reduce((s, session) => s + session.participants.length, 0),
+    0
+  );
+  const publishedQuizzes = userQuizzes.filter(q => q.status === 'published').length;
+
+  return {
+    totalQuizzes,
+    totalSessions,
+    totalParticipants,
+    publishedQuizzes,
+  };
 }

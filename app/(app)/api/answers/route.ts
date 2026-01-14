@@ -92,8 +92,47 @@ export async function GET(request: NextRequest) {
           eq(answers.sessionId, parseInt(sessionId)),
           eq(answers.questionId, parseInt(questionId))
         ),
+        with: {
+          // We need to get participant info through a join
+          // Since Drizzle doesn't have direct relation, we'll fetch participants separately
+        },
       });
-      return NextResponse.json(questionAnswers);
+
+      // Fetch participant info for each answer
+      const answersWithParticipants = await Promise.all(
+        questionAnswers.map(async (answer) => {
+          const participant = await db.query.participants.findFirst({
+            where: (participants, { and, eq }) => and(
+              eq(participants.sessionId, parseInt(sessionId)),
+              eq(participants.userId, answer.userId)
+            ),
+          });
+
+          return {
+            ...answer,
+            participant: participant ? {
+              userName: participant.userName || participant.userId,
+              userId: participant.userId,
+            } : {
+              userName: answer.userId,
+              userId: answer.userId,
+            },
+          };
+        })
+      );
+
+      // Calculate answer distribution
+      const distribution: Record<number, number> = {};
+      questionAnswers.forEach((answer) => {
+        if (answer.optionId !== null) {
+          distribution[answer.optionId] = (distribution[answer.optionId] || 0) + 1;
+        }
+      });
+
+      return NextResponse.json({
+        answers: answersWithParticipants,
+        distribution,
+      });
     }
 
     if (playerId) {

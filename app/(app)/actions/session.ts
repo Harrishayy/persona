@@ -13,10 +13,15 @@ export async function createSession(quizId: number) {
   }
 
   const quiz = await db.query.quizzes.findFirst({
-    where: eq(quizzes.id, quizId),
+    where: eq(quizzes.quizId, quizId),
   });
 
-  if (!quiz || quiz.hostId !== user.id) {
+  if (!quiz) {
+    throw new Error('Quiz not found');
+  }
+
+  // Allow hosting if user owns the quiz OR if quiz is public
+  if (quiz.hostId !== user.id && !quiz.isPublic) {
     throw new Error('Forbidden');
   }
 
@@ -33,7 +38,7 @@ export async function createSession(quizId: number) {
     status: 'waiting',
   }).returning();
 
-  return { id: session.id, code: session.code };
+  return { id: session.sessionId, code: session.code };
 }
 
 export async function joinSession(code: string, userName?: string) {
@@ -156,4 +161,28 @@ export async function endSession(code: string) {
     .returning();
 
   return updated;
+}
+
+export async function deleteSession(code: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const session = await db.query.quizSessions.findFirst({
+    where: eq(quizSessions.code, code),
+    with: {
+      quiz: true,
+    },
+  });
+
+  if (!session || session.quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  await db
+    .delete(quizSessions)
+    .where(eq(quizSessions.code, code));
+
+  return { success: true };
 }

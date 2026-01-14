@@ -3,6 +3,7 @@
 import { ButtonHTMLAttributes } from 'react';
 import { Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { useColorblockRotation } from '@/lib/hooks/useColorblockRotation';
 
 interface OptionButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   text: string;
@@ -28,17 +29,23 @@ export function OptionButton({
   showResult = false,
   colorIndex = 0,
   className,
+  onMouseEnter,
+  onMouseLeave,
+  onMouseDown,
+  onMouseUp,
   ...props
 }: OptionButtonProps) {
   const color = colorBlocks[colorIndex % colorBlocks.length];
+  const rotation = useColorblockRotation({ 
+    enabled: true,
+    initialRotation: 0, // Start with no rotation
+  });
   
   return (
     <button
       className={cn(
         'w-full p-4 border-4 border-[#1F2937] text-left transition-all duration-200',
         'font-bold text-lg',
-        'hover:translate-x-1 hover:translate-y-1 hover:shadow-none',
-        'active:translate-x-2 active:translate-y-2',
         !isSelected && !showResult && 'colorblock-shadow',
         showResult && isCorrect && 'bg-[#86EFAC] text-[#1F2937]',
         showResult && isSelected && !isCorrect && 'bg-[#FCA5A5] text-[#1F2937]',
@@ -47,6 +54,24 @@ export function OptionButton({
       style={{
         backgroundColor: !showResult ? (isSelected ? color.bg : 'white') : undefined,
         color: !showResult ? (isSelected ? color.text : '#1F2937') : undefined,
+        transform: rotation.transform,
+        boxShadow: rotation.isActive ? 'none' : undefined,
+      }}
+      onMouseEnter={(e) => {
+        rotation.handleMouseEnter();
+        onMouseEnter?.(e);
+      }}
+      onMouseLeave={(e) => {
+        rotation.handleMouseLeave();
+        onMouseLeave?.(e);
+      }}
+      onMouseDown={(e) => {
+        rotation.handleMouseDown();
+        onMouseDown?.(e);
+      }}
+      onMouseUp={(e) => {
+        rotation.handleMouseUp();
+        onMouseUp?.(e);
       }}
       {...props}
     >
