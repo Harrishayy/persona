@@ -18,7 +18,7 @@ export function ParticipantList({ participants, currentUserId }: ParticipantList
   const sortedParticipants = [...participants].sort((a, b) => b.score - a.score);
 
   return (
-    <Card variant="blue" className="text-white">
+    <Card variant="blue">
       <div className="flex items-center gap-2 mb-4">
         <Users className="w-5 h-5" />
         <h3 className="text-lg font-black">
@@ -30,17 +30,17 @@ export function ParticipantList({ participants, currentUserId }: ParticipantList
           <div
             key={participant.id}
             className={`
-              flex items-center justify-between p-3 border-4 border-black
+              flex items-center justify-between p-3 border-4 border-[#1F2937]
               transition-all duration-200 font-bold
               ${currentUserId === participant.userId
-                ? 'bg-[#FBBF24] text-black'
-                : 'bg-white text-black'
+                ? 'bg-[#FDE68A] text-[#1F2937]'
+                : 'bg-white text-[#1F2937]'
               }
             `}
           >
             <div className="flex items-center gap-3">
               {index === 0 && participants.length > 1 && (
-                <Trophy className="w-5 h-5 text-[#FBBF24]" />
+                <Trophy className="w-5 h-5 text-[#FDE68A]" />
               )}
               <span>
                 {participant.userName || `User ${participant.userId.slice(0, 8)}`}

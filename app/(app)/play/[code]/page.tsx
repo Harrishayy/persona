@@ -55,9 +55,9 @@ export default async function PlayPage({ params }: PlayPageProps) {
   const typedSession = convertQuizSession(session as DatabaseQuizSession);
 
   return (
-    <div className="min-h-screen bg-white p-4 py-8">
+    <div className="min-h-screen colorblock-bg-pattern p-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6 border-4 border-black bg-[#8B5CF6] text-white p-6 colorblock-shadow">
+        <div className="mb-8 border-4 border-[#1F2937] bg-[#A78BFA] text-[#1F2937] p-6 colorblock-shadow">
           <h1 className="text-5xl font-black">
             {session.quiz.title}
           </h1>

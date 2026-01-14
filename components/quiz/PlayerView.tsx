@@ -89,7 +89,7 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
 
   if (session.status === 'waiting') {
     return (
-      <Card variant="yellow" className="text-center py-12 text-black">
+      <Card variant="yellow" className="text-center py-12">
         <h2 className="text-4xl font-black mb-4">
           Waiting for quiz to start...
         </h2>
@@ -127,7 +127,7 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
 
   if (!currentQuestion) {
     return (
-      <Card variant="orange" className="text-center py-12 text-white">
+      <Card variant="orange" className="text-center py-12">
         <h2 className="text-4xl font-black mb-4">
           Waiting for next question...
         </h2>
@@ -161,7 +161,7 @@ export function PlayerView({ session, playerId, onUpdate }: PlayerViewProps) {
         )}
 
         {hasAnswered ? (
-          <Card variant="green" className="text-center py-8 text-white">
+          <Card variant="green" className="text-center py-8">
             <CheckCircle className="w-16 h-16 mx-auto mb-4" />
             <p className="text-2xl font-black">
               Answer submitted!

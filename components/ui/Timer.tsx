@@ -37,12 +37,12 @@ export function Timer({ initialSeconds, onComplete, variant = 'circular', classN
   const progress = (seconds / initialSeconds) * 100;
 
   if (variant === 'linear') {
-    const color = seconds <= 10 ? '#EF4444' : seconds <= 30 ? '#FBBF24' : '#10B981';
+    const color = seconds <= 10 ? '#FCA5A5' : seconds <= 30 ? '#FDE68A' : '#86EFAC';
     
     return (
       <div className={cn('w-full', className)}>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-bold text-black">Time Remaining</span>
+          <span className="text-sm font-bold text-[#1F2937]">Time Remaining</span>
           <span 
             className="text-2xl font-black"
             style={{ color }}
@@ -50,7 +50,7 @@ export function Timer({ initialSeconds, onComplete, variant = 'circular', classN
             {String(minutes).padStart(2, '0')}:{String(displaySeconds).padStart(2, '0')}
           </span>
         </div>
-        <div className="w-full h-6 bg-white border-4 border-black overflow-hidden">
+        <div className="w-full h-6 bg-white border-4 border-[#1F2937] overflow-hidden">
           <div
             className="h-full transition-all duration-1000"
             style={{ 
@@ -66,7 +66,7 @@ export function Timer({ initialSeconds, onComplete, variant = 'circular', classN
   // Circular variant
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
-  const color = seconds <= 10 ? '#EF4444' : seconds <= 30 ? '#FBBF24' : '#10B981';
+  const color = seconds <= 10 ? '#FCA5A5' : seconds <= 30 ? '#FDE68A' : '#86EFAC';
 
   return (
     <div className={cn('relative inline-flex items-center justify-center', className)}>
@@ -75,7 +75,7 @@ export function Timer({ initialSeconds, onComplete, variant = 'circular', classN
           cx="50"
           cy="50"
           r="45"
-          stroke="#000"
+          stroke="#1F2937"
           strokeWidth="6"
           fill="none"
         />

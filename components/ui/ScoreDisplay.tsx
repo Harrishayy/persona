@@ -16,18 +16,18 @@ export function ScoreDisplay({ score, total, label, variant = 'default' }: Score
     return (
       <Card variant="yellow" className="text-center">
         <div className="flex items-center justify-center mb-4">
-          <Trophy className="w-16 h-16 text-black" />
+          <Trophy className="w-16 h-16 text-[#1F2937]" />
         </div>
-        <div className="text-6xl font-black text-black mb-2">
+        <div className="text-6xl font-black text-[#1F2937] mb-2">
           {score}
           {total && <span className="text-4xl opacity-70">/{total}</span>}
         </div>
         {label && (
-          <p className="text-xl font-bold text-black opacity-90">{label}</p>
+          <p className="text-xl font-bold text-[#1F2937] opacity-90">{label}</p>
         )}
         {total && (
           <div className="mt-4">
-            <div className="text-3xl font-black text-black">
+            <div className="text-3xl font-black text-[#1F2937]">
               {percentage}%
             </div>
           </div>
@@ -38,8 +38,8 @@ export function ScoreDisplay({ score, total, label, variant = 'default' }: Score
 
   return (
     <div className="flex items-center gap-2">
-      <Star className="w-5 h-5 text-[#FBBF24]" />
-      <span className="font-black text-black text-lg">
+      <Star className="w-5 h-5 text-[#FDE68A]" />
+      <span className="font-black text-[#1F2937] text-lg">
         {score}
         {total && <span className="opacity-70">/{total}</span>}
       </span>

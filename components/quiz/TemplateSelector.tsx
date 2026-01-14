@@ -21,7 +21,7 @@ export function TemplateSelector({ templates, onSelect }: TemplateSelectorProps)
           <Card
             key={template.id}
             variant={variant}
-            className="cursor-pointer hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all duration-200 text-white"
+            className="cursor-pointer hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all duration-200"
             onClick={() => onSelect(template)}
           >
             <div className="flex items-center gap-2 mb-2">

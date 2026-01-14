@@ -48,14 +48,14 @@ export default async function HostPage({ params }: HostPageProps) {
   const typedSession: QuizSession = convertQuizSession(session as any);
 
   return (
-    <div className="min-h-screen bg-white p-4 py-8">
+    <div className="min-h-screen colorblock-bg-pattern p-4 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-6 border-4 border-black bg-[#EC4899] text-white p-6 colorblock-shadow">
-          <h1 className="text-5xl font-black">
+        <div className="mb-10 border-4 border-[#1F2937] bg-[#F0A4D0] text-[#1F2937] p-8 colorblock-shadow">
+          <h1 className="text-5xl font-black mb-3">
             {session.quiz.title}
           </h1>
-          <p className="text-xl font-bold opacity-90 mt-2">
-            Host Dashboard • Code: <span className="font-black">{code}</span>
+          <p className="text-xl font-bold opacity-90">
+            Host Dashboard • Code: <span className="font-black text-2xl">{code}</span>
           </p>
         </div>
         <HostPageClient session={typedSession} />

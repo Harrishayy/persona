@@ -59,7 +59,7 @@ export function HostDashboard({ session, onUpdate }: HostDashboardProps) {
     <div className="grid lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2 space-y-6">
         {session.status === 'waiting' && (
-          <Card variant="yellow" className="text-center py-12 text-black">
+          <Card variant="yellow" className="text-center py-12">
             <h2 className="text-4xl font-black mb-4">
               Waiting for players...
             </h2>
@@ -85,7 +85,7 @@ export function HostDashboard({ session, onUpdate }: HostDashboardProps) {
                 {currentQuestion.options.map((option, idx) => (
                   <div
                     key={idx}
-                    className="p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                    className="p-4 border-4 border-[#1F2937] bg-white"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{option.text}</span>
@@ -101,7 +101,7 @@ export function HostDashboard({ session, onUpdate }: HostDashboardProps) {
         )}
 
         {session.status === 'finished' && (
-          <Card variant="green" className="text-center py-12 text-white">
+          <Card variant="green" className="text-center py-12">
             <h2 className="text-4xl font-black mb-4">
               Quiz Finished!
             </h2>

@@ -9,13 +9,13 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 
 export function Badge({ children, variant = 'default', size = 'md', className, ...props }: BadgeProps) {
   const variants = {
-    default: 'bg-black text-white border-2 border-black',
-    success: 'bg-[#10B981] text-white border-2 border-black',
-    warning: 'bg-[#FBBF24] text-black border-2 border-black',
-    error: 'bg-[#EF4444] text-white border-2 border-black',
-    info: 'bg-[#3B82F6] text-white border-2 border-black',
-    purple: 'bg-[#8B5CF6] text-white border-2 border-black',
-    pink: 'bg-[#EC4899] text-white border-2 border-black',
+    default: 'bg-[#1F2937] text-white border-2 border-[#1F2937]',
+    success: 'bg-[#86EFAC] text-[#1F2937] border-2 border-[#1F2937]',
+    warning: 'bg-[#FDE68A] text-[#1F2937] border-2 border-[#1F2937]',
+    error: 'bg-[#FCA5A5] text-[#1F2937] border-2 border-[#1F2937]',
+    info: 'bg-[#93C5FD] text-[#1F2937] border-2 border-[#1F2937]',
+    purple: 'bg-[#A78BFA] text-[#1F2937] border-2 border-[#1F2937]',
+    pink: 'bg-[#F0A4D0] text-[#1F2937] border-2 border-[#1F2937]',
   };
 
   const sizes = {

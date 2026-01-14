@@ -31,10 +31,10 @@ export function Toast({ message, type = 'info', duration = 3000, onClose }: Toas
   };
 
   const styles = {
-    success: 'bg-[#10B981] text-white border-4 border-black',
-    error: 'bg-[#EF4444] text-white border-4 border-black',
-    info: 'bg-[#3B82F6] text-white border-4 border-black',
-    warning: 'bg-[#FBBF24] text-black border-4 border-black',
+    success: 'bg-[#86EFAC] text-[#1F2937] border-4 border-[#1F2937]',
+    error: 'bg-[#FCA5A5] text-[#1F2937] border-4 border-[#1F2937]',
+    info: 'bg-[#93C5FD] text-[#1F2937] border-4 border-[#1F2937]',
+    warning: 'bg-[#FDE68A] text-[#1F2937] border-4 border-[#1F2937]',
   };
 
   return (
@@ -53,7 +53,7 @@ export function Toast({ message, type = 'info', duration = 3000, onClose }: Toas
           setIsVisible(false);
           setTimeout(onClose, 300);
         }}
-        className="p-1 hover:bg-black/20 transition-colors"
+        className="p-1 hover:bg-[#1F2937]/20 transition-colors"
       >
         <X className="w-4 h-4" />
       </button>

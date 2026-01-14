@@ -1,17 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --colorblock-purple: #8B5CF6;
-  --colorblock-pink: #EC4899;
-  --colorblock-blue: #3B82F6;
-  --colorblock-cyan: #06B6D4;
-  --colorblock-yellow: #FBBF24;
-  --colorblock-green: #10B981;
-  --colorblock-orange: #F97316;
-  --colorblock-red: #EF4444;
-  --colorblock-black: #000000;
+  /* Toned-down colorblock palette */
+  --colorblock-purple: #A78BFA;
+  --colorblock-pink: #F0A4D0;
+  --colorblock-blue: #93C5FD;
+  --colorblock-cyan: #67E8F9;
+  --colorblock-yellow: #FDE68A;
+  --colorblock-green: #86EFAC;
+  --colorblock-orange: #FDBA74;
+  --colorblock-red: #FCA5A5;
+  --colorblock-black: #1F2937;
   --colorblock-white: #FFFFFF;
-  --colorblock-gray: #1F2937;
+  --colorblock-gray: #6B7280;
+  --colorblock-cream: #FEF3C7;
 }
 
 @theme inline {
@@ -36,13 +38,20 @@ body {
 
 /* Colorblock utility classes */
 .colorblock-shadow {
-  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.1);
+  box-shadow: 6px 6px 0px 0px rgba(31, 41, 55, 0.15);
 }
 
 .colorblock-shadow-lg {
-  box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 0.15);
+  box-shadow: 8px 8px 0px 0px rgba(31, 41, 55, 0.2);
 }
 
 .colorblock-shadow-xl {
-  box-shadow: 16px 16px 0px 0px rgba(0, 0, 0, 0.2);
+  box-shadow: 12px 12px 0px 0px rgba(31, 41, 55, 0.25);
+}
+
+/* Background patterns */
+.colorblock-bg-pattern {
+  background-color: var(--colorblock-cream);
+  background-image: 
+    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(31, 41, 55, 0.02) 10px, rgba(31, 41, 55, 0.02) 20px);
 }

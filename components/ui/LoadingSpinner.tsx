@@ -14,10 +14,10 @@ export function LoadingSpinner({ size = 'md', color = 'purple', className, ...pr
   };
 
   const colors = {
-    purple: 'border-[#8B5CF6]',
-    pink: 'border-[#EC4899]',
-    blue: 'border-[#3B82F6]',
-    green: 'border-[#10B981]',
+    purple: 'border-[#A78BFA]',
+    pink: 'border-[#F0A4D0]',
+    blue: 'border-[#93C5FD]',
+    green: 'border-[#86EFAC]',
   };
 
   return (

@@ -51,8 +51,8 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
     <Card className="mb-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <GripVertical className="w-5 h-5 text-gray-400" />
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          <GripVertical className="w-5 h-5 text-[#6B7280]" />
+          <h3 className="text-lg font-bold text-[#1F2937]">
             Question {index + 1}
           </h3>
         </div>
@@ -63,7 +63,7 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-bold text-[#1F2937] mb-2">
             Question Type
           </label>
           <select
@@ -76,7 +76,7 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
                 options: needsOptions ? localQuestion.options || [] : undefined,
               });
             }}
-            className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+            className="w-full px-4 py-3 border-4 border-[#1F2937] bg-white text-[#1F2937] font-medium focus:outline-none focus:ring-4 focus:ring-[#A78BFA] focus:ring-offset-2 transition-all duration-200"
           >
             <option value="multiple_choice">Multiple Choice</option>
             <option value="true_false">True/False</option>
@@ -95,7 +95,7 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
         {(localQuestion.type === 'multiple_choice' || localQuestion.type === 'true_false') && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-bold text-[#1F2937]">
                 Options
               </label>
               <Button variant="secondary" size="sm" onClick={addOption}>
@@ -117,9 +117,9 @@ export function QuestionEditor({ question, index, onChange, onDelete }: Question
                       type="checkbox"
                       checked={option.isCorrect}
                       onChange={(e) => updateOption(optIndex, { isCorrect: e.target.checked })}
-                      className="w-5 h-5 rounded border-gray-300"
+                      className="w-5 h-5 rounded border-2 border-[#1F2937] accent-[#86EFAC]"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Correct</span>
+                    <span className="text-sm font-bold text-[#1F2937]">Correct</span>
                   </label>
                   <Button
                     variant="danger"

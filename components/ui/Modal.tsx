@@ -44,12 +44,12 @@ export function Modal({
   };
 
   const colorMap = {
-    purple: 'bg-[#8B5CF6]',
-    pink: 'bg-[#EC4899]',
-    blue: 'bg-[#3B82F6]',
-    yellow: 'bg-[#FBBF24]',
-    green: 'bg-[#10B981]',
-    orange: 'bg-[#F97316]',
+    purple: 'bg-[#A78BFA] text-[#1F2937]',
+    pink: 'bg-[#F0A4D0] text-[#1F2937]',
+    blue: 'bg-[#93C5FD] text-[#1F2937]',
+    yellow: 'bg-[#FDE68A] text-[#1F2937]',
+    green: 'bg-[#86EFAC] text-[#1F2937]',
+    orange: 'bg-[#FDBA74] text-[#1F2937]',
   };
 
   return (
@@ -60,23 +60,23 @@ export function Modal({
       <div className="fixed inset-0 bg-black/60" />
       <div
         className={cn(
-          'relative z-50 w-full border-4 border-black',
+          'relative z-50 w-full border-4 border-[#1F2937]',
           colorMap[color],
-          'text-white animate-in fade-in zoom-in-95 duration-200',
+          'animate-in fade-in zoom-in-95 duration-200',
           'colorblock-shadow-lg',
           sizes[size]
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b-4 border-black">
+          <div className="flex items-center justify-between p-6 border-b-4 border-[#1F2937]">
             {title && (
               <h2 className="text-2xl font-black">{title}</h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-black/20 transition-colors border-2 border-black"
+                className="p-2 hover:bg-[#1F2937]/20 transition-colors border-2 border-[#1F2937]"
               >
                 <X className="w-5 h-5" />
               </button>

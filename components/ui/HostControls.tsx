@@ -19,7 +19,7 @@ export function HostControls({
   canGoNext,
 }: HostControlsProps) {
   return (
-    <div className="flex items-center gap-4 p-4 bg-[#8B5CF6] border-4 border-black text-white colorblock-shadow">
+    <div className="flex items-center gap-4 p-4 bg-[#A78BFA] border-4 border-[#1F2937] text-[#1F2937] colorblock-shadow">
       <div className="flex items-center gap-2">
         <Users className="w-5 h-5" />
         <span className="font-bold">{participantCount} joined</span>

@@ -52,7 +52,7 @@ export function JoinQuizClient() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Input
         label="Your Name"
         value={userName}
@@ -72,7 +72,7 @@ export function JoinQuizClient() {
       <Button
         onClick={handleJoin}
         variant="primary"
-        className="w-full"
+        className="w-full mt-8"
         size="lg"
         isLoading={isLoading}
         disabled={code.length !== 6 || !userName.trim()}

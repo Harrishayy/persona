@@ -33,7 +33,7 @@ export function QuestionCard({
         {question}
       </h2>
       {imageUrl && (
-        <div className="mb-4 border-4 border-black overflow-hidden">
+        <div className="mb-4 border-4 border-[#1F2937] overflow-hidden">
           <img
             src={imageUrl}
             alt="Question"
