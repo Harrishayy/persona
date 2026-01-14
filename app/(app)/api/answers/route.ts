@@ -15,7 +15,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Player ID is required' }, { status: 400 });
     }
 
-    const validated = answerSubmissionSchema.parse(answerData);
+    let validated;
+    try {
+      validated = answerSubmissionSchema.parse(answerData);
+    } catch (validationError) {
+      if (validationError instanceof ZodError) {
+        console.error('Validation error:', validationError.issues);
+        return NextResponse.json({ 
+          error: 'Validation error', 
+          details: validationError.issues 
+        }, { status: 400 });
+      }
+      throw validationError;
+    }
 
     // Check if already answered
     const existing = await db.query.answers.findFirst({
@@ -33,8 +45,9 @@ export async function POST(request: NextRequest) {
     // Check if answer is correct
     let isCorrect = false;
     if (validated.optionId) {
+      // Handle both optionId (from schema) and id (from type definition)
       const option = await db.query.questionOptions.findFirst({
-        where: eq(questionOptions.id, validated.optionId),
+        where: eq(questionOptions.optionId, validated.optionId),
       });
       isCorrect = option?.isCorrect ?? false;
     }
@@ -61,7 +74,7 @@ export async function POST(request: NextRequest) {
         await db
           .update(participants)
           .set({ score: participant.score + 1 })
-          .where(eq(participants.id, participant.id));
+          .where(eq(participants.participantId, participant.participantId));
       }
     }
 

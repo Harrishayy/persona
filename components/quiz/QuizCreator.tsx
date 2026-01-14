@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import type { Question, QuizTemplate } from '@/lib/types/app';
 import type { GameMode, DatabaseQuiz } from '@/lib/types/database';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils/cn';
 import { useToast } from '@/lib/hooks/useToast';
 import { convertQuestion } from '@/lib/types/converters';
 import { quizSchema } from '@/lib/utils/validation';
+import { uploadBlobUrlToR2, uploadFileObjectToR2, deleteR2ImageIfExists, isBlobUrl, isR2Url } from '@/lib/storage/image-upload';
 
 interface QuizCreatorProps {
   initialTemplate?: QuizTemplate | null;
@@ -22,6 +23,7 @@ interface QuizCreatorProps {
 
 export function QuizCreator({ initialTemplate, initialQuiz }: QuizCreatorProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { showToast } = useToast();
   const isEditing = !!initialQuiz;
 
@@ -64,6 +66,10 @@ export function QuizCreator({ initialTemplate, initialQuiz }: QuizCreatorProps) 
     ];
   });
 
+  // Store File objects for direct upload (avoids blob URL fetch issues)
+  const quizImageFileRef = useRef<File | null>(null);
+  const questionImageFilesRef = useRef<Map<number, File>>(new Map());
+
   // UI state
   const [isDetailedView, setIsDetailedView] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,37 +102,105 @@ export function QuizCreator({ initialTemplate, initialQuiz }: QuizCreatorProps) 
   };
 
   const handleSubmit = async () => {
-    // Prepare request body
-    const requestBody = {
-      title,
-      description,
-      imageUrl: imageUrl || undefined,
-      emoji: emoji || undefined,
-      isPublic,
-      gameMode,
-      questions: questions.map((q, i) => ({
-        ...q,
-        order: i,
-      })),
-    };
-
-    // Client-side validation
+    setIsSubmitting(true);
+    
     try {
-      quizSchema.parse(requestBody);
-    } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'issues' in error) {
-        const zodError = error as { issues: Array<{ message: string; path: (string | number)[] }> };
-        const firstError = zodError.issues[0];
-        const errorMessage = firstError?.message || 'Validation error';
-        showToast(errorMessage, 'error');
+      // Upload all blob URLs to R2 before saving
+      let finalImageUrl = imageUrl;
+      const oldImageUrl = isEditing && initialQuiz?.imageUrl ? initialQuiz.imageUrl : undefined;
+
+      // Upload quiz image if it's a blob URL
+      if (imageUrl && isBlobUrl(imageUrl)) {
+        try {
+          // Prefer File object if available (more reliable than fetching blob URL)
+          if (quizImageFileRef.current) {
+            finalImageUrl = await uploadFileObjectToR2(quizImageFileRef.current);
+          } else {
+            // Fallback to blob URL fetch
+            finalImageUrl = await uploadBlobUrlToR2(imageUrl, 'quiz-image');
+          }
+          // Clean up old image if it was replaced
+          if (oldImageUrl && isR2Url(oldImageUrl)) {
+            await deleteR2ImageIfExists(oldImageUrl);
+          }
+        } catch (error) {
+          console.error('Error uploading quiz image:', error);
+          showToast('Failed to upload quiz image', 'error');
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (oldImageUrl && imageUrl && oldImageUrl !== imageUrl && isR2Url(oldImageUrl)) {
+        // Image was removed, delete old R2 image
+        await deleteR2ImageIfExists(oldImageUrl);
+      }
+
+      // Upload question images
+      const uploadedQuestions = await Promise.all(
+        questions.map(async (q, i) => {
+          let finalQuestionImageUrl = q.imageUrl;
+          const oldQuestionImageUrl = isEditing && initialQuiz?.questions?.[i]?.imageUrl 
+            ? initialQuiz.questions[i].imageUrl 
+            : undefined;
+
+          if (q.imageUrl && isBlobUrl(q.imageUrl)) {
+            try {
+              // Prefer File object if available (more reliable than fetching blob URL)
+              const questionFile = questionImageFilesRef.current.get(i);
+              if (questionFile) {
+                finalQuestionImageUrl = await uploadFileObjectToR2(questionFile);
+              } else {
+                // Fallback to blob URL fetch
+                finalQuestionImageUrl = await uploadBlobUrlToR2(q.imageUrl, `question-${i}-image`);
+              }
+              // Clean up old image if it was replaced
+              if (oldQuestionImageUrl && isR2Url(oldQuestionImageUrl)) {
+                await deleteR2ImageIfExists(oldQuestionImageUrl);
+              }
+            } catch (error) {
+              console.error(`Error uploading question ${i} image:`, error);
+              throw new Error(`Failed to upload image for question ${i + 1}`);
+            }
+          } else if (oldQuestionImageUrl && q.imageUrl && oldQuestionImageUrl !== q.imageUrl && isR2Url(oldQuestionImageUrl)) {
+            // Image was removed, delete old R2 image
+            await deleteR2ImageIfExists(oldQuestionImageUrl);
+          }
+
+          return {
+            ...q,
+            imageUrl: finalQuestionImageUrl,
+            order: i,
+          };
+        })
+      );
+
+      // Prepare request body with uploaded URLs
+      const requestBody = {
+        title,
+        description,
+        imageUrl: finalImageUrl || undefined,
+        emoji: emoji || undefined,
+        isPublic,
+        gameMode,
+        questions: uploadedQuestions,
+      };
+
+      // Client-side validation
+      try {
+        quizSchema.parse(requestBody);
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'issues' in error) {
+          const zodError = error as { issues: Array<{ message: string; path: (string | number)[] }> };
+          const firstError = zodError.issues[0];
+          const errorMessage = firstError?.message || 'Validation error';
+          showToast(errorMessage, 'error');
+          setIsSubmitting(false);
+          return;
+        }
+        showToast('Validation error', 'error');
+        setIsSubmitting(false);
         return;
       }
-      showToast('Validation error', 'error');
-      return;
-    }
 
-    setIsSubmitting(true);
-    try {
       let quizId: string;
 
       if (isEditing && initialQuiz) {
@@ -256,25 +330,44 @@ export function QuizCreator({ initialTemplate, initialQuiz }: QuizCreatorProps) 
               isPublic={isPublic}
               gameMode={gameMode}
               hasRounds={false}
+              isEditing={isEditing}
               onTitleChange={setTitle}
               onDescriptionChange={setDescription}
               onImageUrlChange={setImageUrl}
+              onImageFileChange={(file) => {
+                quizImageFileRef.current = file;
+              }}
               onEmojiChange={setEmoji}
               onPublicChange={setIsPublic}
               onGameModeChange={setGameMode}
             />
 
             <QuestionList
+              isEditing={isEditing}
               questions={questions}
               onQuestionsChange={setQuestions}
               onAddQuestion={addQuestion}
               onUpdateQuestion={updateQuestion}
               onDeleteQuestion={deleteQuestion}
               onActiveQuestionChange={setActiveQuestionIndex}
+              onImageFileChange={(index, file) => {
+                if (file) {
+                  questionImageFilesRef.current.set(index, file);
+                } else {
+                  questionImageFilesRef.current.delete(index);
+                }
+              }}
             />
 
             <div className="flex justify-end gap-4 pb-8">
-              <Button variant="outline" onClick={() => router.back()}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Navigate to parent route (../)
+                  const parentPath = pathname.split('/').slice(0, -1).join('/') || '/';
+                  router.push(parentPath);
+                }}
+              >
                 Cancel
               </Button>
               <Button

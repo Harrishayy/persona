@@ -54,6 +54,7 @@ export const quizSessions = pgTable('quiz_sessions', {
   code: varchar('code', { length: 6 }).notNull().unique(),
   status: varchar('status', { length: 20 }).notNull().default('waiting'), // waiting, active, finished
   currentQuestionId: uuid('current_question_id').references(() => questions.questionId),
+  resultsView: varchar('results_view', { length: 20 }), // null, 'barChart', 'ranking'
   startedAt: timestamp('started_at'),
   endedAt: timestamp('ended_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -77,6 +78,16 @@ export const answers = pgTable('answers', {
   optionId: uuid('option_id').references(() => questionOptions.optionId),
   isCorrect: boolean('is_correct').notNull().default(false),
   answeredAt: timestamp('answered_at').notNull().defaultNow(),
+});
+
+export const questionResults = pgTable('question_results', {
+  resultId: uuid('result_id').primaryKey().defaultRandom(),
+  sessionId: uuid('session_id').notNull().references(() => quizSessions.sessionId, { onDelete: 'cascade' }),
+  questionId: uuid('question_id').notNull().references(() => questions.questionId, { onDelete: 'cascade' }),
+  shownAt: timestamp('shown_at').notNull().defaultNow(),
+  answerDistribution: jsonb('answer_distribution').notNull(), // mapping of optionId to answer count
+  totalAnswers: integer('total_answers').notNull().default(0),
+  correctAnswers: integer('correct_answers').notNull().default(0),
 });
 
 // Relations
@@ -112,6 +123,7 @@ export const quizSessionsRelations = relations(quizSessions, ({ one, many }) => 
   }),
   participants: many(participants),
   answers: many(answers),
+  questionResults: many(questionResults),
 }));
 
 export const participantsRelations = relations(participants, ({ one }) => ({
@@ -128,6 +140,17 @@ export const answersRelations = relations(answers, ({ one }) => ({
   }),
   question: one(questions, {
     fields: [answers.questionId],
+    references: [questions.questionId],
+  }),
+}));
+
+export const questionResultsRelations = relations(questionResults, ({ one }) => ({
+  session: one(quizSessions, {
+    fields: [questionResults.sessionId],
+    references: [quizSessions.sessionId],
+  }),
+  question: one(questions, {
+    fields: [questionResults.questionId],
     references: [questions.questionId],
   }),
 }));

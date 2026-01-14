@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { quizSchema } from '@/lib/utils/validation';
 import { getErrorMessage } from '@/lib/types/errors';
 import { ZodError } from 'zod';
+import { deleteR2ImageIfExists, isR2Url } from '@/lib/storage/image-upload';
 
 export async function GET(
   request: NextRequest,
@@ -84,6 +85,28 @@ export async function DELETE(
     if (quiz.hostId !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    // Get all images to delete from R2
+    const imagesToDelete: string[] = [];
+    
+    // Add quiz image
+    if (quiz.imageUrl && isR2Url(quiz.imageUrl)) {
+      imagesToDelete.push(quiz.imageUrl);
+    }
+
+    // Get all question images
+    const quizQuestions = await db.query.questions.findMany({
+      where: eq(questions.quizId, quizId),
+    });
+
+    for (const question of quizQuestions) {
+      if (question.imageUrl && isR2Url(question.imageUrl)) {
+        imagesToDelete.push(question.imageUrl);
+      }
+    }
+
+    // Delete images from R2
+    await Promise.all(imagesToDelete.map(url => deleteR2ImageIfExists(url)));
 
     // Delete the quiz (cascade will handle related records)
     await db.delete(quizzes).where(eq(quizzes.quizId, quizId));

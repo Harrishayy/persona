@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle, XCircle, Info, AlertCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -13,14 +13,28 @@ interface ToastProps {
 
 export function Toast({ message, type = 'info', duration = 3000, onClose }: ToastProps) {
   const [isVisible, setIsVisible] = useState(true);
+  const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = () => {
+    if (autoCloseRef.current) {
+      clearTimeout(autoCloseRef.current);
+      autoCloseRef.current = null;
+    }
+    if (closeRef.current) {
+      clearTimeout(closeRef.current);
+      closeRef.current = null;
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    clearTimers();
+    autoCloseRef.current = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onClose, 300);
+      closeRef.current = setTimeout(onClose, 300);
     }, duration);
 
-    return () => clearTimeout(timer);
+    return clearTimers;
   }, [duration, onClose]);
 
   const icons = {
@@ -50,8 +64,9 @@ export function Toast({ message, type = 'info', duration = 3000, onClose }: Toas
       <p className="flex-1">{message}</p>
       <button
         onClick={() => {
+          clearTimers();
           setIsVisible(false);
-          setTimeout(onClose, 300);
+          closeRef.current = setTimeout(onClose, 300);
         }}
         className="p-1 hover:bg-[#1F2937]/20 transition-colors"
       >

@@ -11,6 +11,10 @@ export default authkitMiddleware({
             '/auth/callback',
             '/join',
             '/play',
+            // Allow anonymous players to join sessions
+            '/api/sessions',
+            // Allow anonymous players to submit answers
+            '/api/answers',
         ],
     },
 });

@@ -18,17 +18,42 @@ interface QuestionEditorProps {
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   rounds?: Array<{ id?: number; order: number; title?: string }>;
   hideHeader?: boolean;
+  isEditing?: boolean;
+  onImageFileChange?: (index: number, file: File | null) => void;
 }
 
-export function QuestionEditor({ question, index, onChange, onDelete, dragHandleProps, rounds, hideHeader = false }: QuestionEditorProps) {
+export function QuestionEditor({ question, index, onChange, onDelete, dragHandleProps, rounds, hideHeader = false, isEditing = false, onImageFileChange }: QuestionEditorProps) {
   const [localQuestion, setLocalQuestion] = useState(question);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const previousBlobUrlRef = useRef<string | null>(null);
 
   // Update local state when question prop changes (e.g., after reordering)
   useEffect(() => {
     setLocalQuestion(question);
   }, [question]);
+
+  // Cleanup blob URLs when image changes (but not the current one)
+  useEffect(() => {
+    const previousUrl = previousBlobUrlRef.current;
+    const currentUrl = localQuestion.imageUrl;
+    
+    // Update ref to current URL
+    previousBlobUrlRef.current = currentUrl || null;
+    
+    // Cleanup previous blob URL if it's different from current and is a blob URL
+    if (previousUrl && previousUrl !== currentUrl && previousUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previousUrl);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (currentUrl && currentUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(currentUrl);
+      }
+    };
+  }, [localQuestion.imageUrl]);
 
   const updateQuestion = (updates: Partial<Question>) => {
     const updated = { ...localQuestion, ...updates };
@@ -63,9 +88,9 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type - only allow PNG, JPEG, JPG
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    const allowedExtensions = ['.png', '.jpg', '.jpeg'];
+    // Validate file type - only allow PNG, JPEG, JPG, WebP
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     
     // Check for HEIC files explicitly
@@ -79,7 +104,7 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
     
     // Check if file type is allowed
     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      showToast('Please select a PNG, JPEG, or JPG image file', 'error');
+      showToast('Please select a PNG, JPEG, JPG, or WebP image file', 'error');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -96,21 +121,24 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
       return;
     }
 
-    // Convert to base64 data URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        updateQuestion({ imageUrl: dataUrl });
-      }
-    };
-    reader.onerror = () => {
-      showToast('Failed to read image file', 'error');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsDataURL(file);
+    // Cleanup previous blob URL if it exists and is different from current
+    if (localQuestion.imageUrl && localQuestion.imageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(localQuestion.imageUrl);
+    }
+    if (previousBlobUrlRef.current && previousBlobUrlRef.current.startsWith('blob:') && previousBlobUrlRef.current !== localQuestion.imageUrl) {
+      URL.revokeObjectURL(previousBlobUrlRef.current);
+    }
+    
+    // Store file as blob URL for preview - will upload to R2 when quiz is saved
+    const localPreviewUrl = URL.createObjectURL(file);
+    previousBlobUrlRef.current = localPreviewUrl;
+    updateQuestion({ imageUrl: localPreviewUrl });
+    // Also store the File object for direct upload (avoids blob URL fetch issues)
+    onImageFileChange?.(index, file);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleImageClick = () => {
@@ -119,23 +147,7 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
 
   const content = (
     <div className="space-y-4">
-        {rounds && rounds.length > 0 && (
-          <Select
-            label="Assign to Round (Optional)"
-            value={localQuestion.roundId !== undefined ? localQuestion.roundId.toString() : ''}
-            onChange={(value) => {
-              const roundId = value ? parseInt(value) : undefined;
-              updateQuestion({ roundId });
-            }}
-            options={[
-              { value: '', label: 'No Round (Quiz Level)' },
-              ...rounds.map((round, index) => ({
-                value: round.order.toString(),
-                label: round.title || `Round ${round.order + 1}`,
-              })),
-            ]}
-          />
-        )}
+        {/* Rounds feature removed */}
 
         <Select
           label="Question Type"
@@ -171,7 +183,7 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/jpg"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -181,10 +193,11 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
               variant="secondary"
               size="sm"
               onClick={handleImageClick}
+              disabled={isUploading}
               className="flex items-center gap-2"
             >
               <Upload className="w-4 h-4" />
-              Choose Image
+              {isUploading ? 'Uploading...' : 'Choose Image'}
             </Button>
             {localQuestion.imageUrl && (
               <div className="relative">
@@ -193,12 +206,36 @@ export function QuestionEditor({ question, index, onChange, onDelete, dragHandle
                   alt="Question preview"
                   className="w-16 h-16 object-cover border-4 border-[#1F2937] rounded-lg"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
+                    const img = e.target as HTMLImageElement;
+                    img.style.display = 'none';
+                    // If it's a blob URL that failed, clean it up
+                    if (localQuestion.imageUrl && localQuestion.imageUrl.startsWith('blob:')) {
+                      URL.revokeObjectURL(localQuestion.imageUrl);
+                      previousBlobUrlRef.current = null;
+                      updateQuestion({ imageUrl: undefined });
+                      onImageFileChange?.(index, null);
+                    }
                   }}
                 />
                 <button
                   type="button"
-                  onClick={() => updateQuestion({ imageUrl: undefined })}
+                  onClick={() => {
+                    // Cleanup blob URL when removing image
+                    const urlToRevoke = localQuestion.imageUrl;
+                    if (urlToRevoke && urlToRevoke.startsWith('blob:')) {
+                      // Clear the ref first to prevent cleanup effect from trying to revoke it again
+                      previousBlobUrlRef.current = null;
+                      // Small delay to ensure React has updated before revoking
+                      setTimeout(() => {
+                        try {
+                          URL.revokeObjectURL(urlToRevoke);
+                        } catch (e) {
+                          // Ignore errors if URL was already revoked
+                        }
+                      }, 0);
+                    }
+                    updateQuestion({ imageUrl: undefined });
+                  }}
                   className="absolute -top-2 -right-2 bg-[#FCA5A5] text-[#1F2937] rounded-full p-1 hover:scale-110 transition-transform"
                 >
                   <X className="w-3 h-3" />

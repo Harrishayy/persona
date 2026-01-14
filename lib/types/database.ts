@@ -54,12 +54,15 @@ export interface DatabaseParticipant {
   joinedAt: Date;
 }
 
+export type ResultsView = 'barChart' | 'ranking' | null;
+
 export interface DatabaseQuizSession {
   id: string;
   quizId: string;
   code: string;
   status: string; // Database returns string, needs validation
   currentQuestionId: string | null;
+  resultsView: ResultsView;
   startedAt: Date | null;
   endedAt: Date | null;
   createdAt: Date;
@@ -76,4 +79,14 @@ export interface DatabaseAnswer {
   optionId: string | null;
   isCorrect: boolean;
   answeredAt: Date;
+}
+
+export interface DatabaseQuestionResult {
+  id: string;
+  sessionId: string;
+  questionId: string;
+  shownAt: Date;
+  answerDistribution: Record<string, number>; // optionId -> count
+  totalAnswers: number;
+  correctAnswers: number;
 }

@@ -18,9 +18,11 @@ interface QuizHeaderProps {
   isPublic: boolean;
   gameMode: GameMode;
   hasRounds: boolean;
+  isEditing?: boolean;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
   onImageUrlChange: (url: string) => void;
+  onImageFileChange?: (file: File | null) => void;
   onEmojiChange: (emoji: string) => void;
   onPublicChange: (isPublic: boolean) => void;
   onGameModeChange: (mode: GameMode) => void;
@@ -34,9 +36,11 @@ export function QuizHeader({
   isPublic,
   gameMode,
   hasRounds,
+  isEditing = false,
   onTitleChange,
   onDescriptionChange,
   onImageUrlChange,
+  onImageFileChange,
   onEmojiChange,
   onPublicChange,
   onGameModeChange,
@@ -46,6 +50,7 @@ export function QuizHeader({
   const [emojiInput, setEmojiInput] = useState(emoji || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const previousBlobUrlRef = useRef<string | null>(null);
 
   // Update useEmoji state when props change
   useEffect(() => {
@@ -55,6 +60,26 @@ export function QuizHeader({
       setUseEmoji(false);
     }
   }, [emoji, imageUrl]);
+
+  // Cleanup blob URLs when image changes (but not the current one)
+  useEffect(() => {
+    const previousUrl = previousBlobUrlRef.current;
+    
+    // Update ref to current URL
+    previousBlobUrlRef.current = imageUrl || null;
+    
+    // Cleanup previous blob URL if it's different from current and is a blob URL
+    if (previousUrl && previousUrl !== imageUrl && previousUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(previousUrl);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageUrl]);
 
   const handleEmojiSubmit = () => {
     if (emojiInput.trim()) {
@@ -70,7 +95,6 @@ export function QuizHeader({
     // Ensure only one file is selected
     if (files.length > 1) {
       showToast('Only one image is allowed. Please select a single image file.', 'warning');
-      // Reset the input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -79,9 +103,9 @@ export function QuizHeader({
 
     const file = files[0];
 
-    // Validate file type - only allow PNG, JPEG, JPG
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    const allowedExtensions = ['.png', '.jpg', '.jpeg'];
+    // Validate file type - only allow PNG, JPEG, JPG, WebP
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
     
     // Check for HEIC files explicitly
@@ -95,7 +119,7 @@ export function QuizHeader({
     
     // Check if file type is allowed
     if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      showToast('Please select a PNG, JPEG, or JPG image file', 'error');
+      showToast('Please select a PNG, JPEG, JPG, or WebP image file', 'error');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -112,32 +136,25 @@ export function QuizHeader({
       return;
     }
 
-    // Convert to base64 data URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl) {
-        // Clear emoji and set new image
-        onEmojiChange('');
-        onImageUrlChange(dataUrl);
-      }
-    };
-    reader.onerror = () => {
-      showToast('Failed to read image file', 'error');
-      // Reset the input on error
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsDataURL(file);
+    // Cleanup previous blob URL if it exists and is different
+    if (imageUrl && imageUrl.startsWith('blob:') && imageUrl !== previousBlobUrlRef.current) {
+      URL.revokeObjectURL(imageUrl);
+    }
+    if (previousBlobUrlRef.current && previousBlobUrlRef.current.startsWith('blob:') && previousBlobUrlRef.current !== imageUrl) {
+      URL.revokeObjectURL(previousBlobUrlRef.current);
+    }
     
-    // Reset the input after reading so the same file can be selected again if needed
-    // Do this after a small delay to ensure the file is processed
-    setTimeout(() => {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }, 100);
+    // Store file as blob URL for preview - will upload to R2 when quiz is saved
+    const localPreviewUrl = URL.createObjectURL(file);
+    previousBlobUrlRef.current = localPreviewUrl;
+    onEmojiChange('');
+    onImageUrlChange(localPreviewUrl);
+    // Also store the File object for direct upload (avoids blob URL fetch issues)
+    onImageFileChange?.(file);
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleImageClick = () => {
@@ -241,7 +258,7 @@ export function QuizHeader({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/png,image/jpeg,image/jpg"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
                 onChange={handleFileSelect}
                 className="hidden"
                 multiple={false}
@@ -264,12 +281,33 @@ export function QuizHeader({
                       alt="Quiz preview"
                       className="w-16 h-16 object-cover border-4 border-[#1F2937] rounded-lg"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
+                        const img = e.target as HTMLImageElement;
+                        img.style.display = 'none';
+                        // If it's a blob URL that failed, clean it up
+                        if (imageUrl && imageUrl.startsWith('blob:')) {
+                          URL.revokeObjectURL(imageUrl);
+                          previousBlobUrlRef.current = null;
+                          onImageUrlChange('');
+                        }
                       }}
                     />
                     <button
                       type="button"
                       onClick={() => {
+                        // Cleanup blob URL when removing image
+                        const urlToRevoke = imageUrl;
+                        if (urlToRevoke && urlToRevoke.startsWith('blob:')) {
+                          // Clear the ref first to prevent cleanup effect from trying to revoke it again
+                          previousBlobUrlRef.current = null;
+                          // Small delay to ensure React has updated before revoking
+                          setTimeout(() => {
+                            try {
+                              URL.revokeObjectURL(urlToRevoke);
+                            } catch (e) {
+                              // Ignore errors if URL was already revoked
+                            }
+                          }, 0);
+                        }
                         onImageUrlChange('');
                         // Reset file input
                         if (fileInputRef.current) {

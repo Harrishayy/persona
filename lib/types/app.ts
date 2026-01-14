@@ -3,7 +3,9 @@
  * Optional fields use `undefined` instead of `null`
  */
 
-import type { QuestionType, QuizStatus, SessionStatus, GameMode } from './database';
+import type { QuestionType, QuizStatus, SessionStatus, GameMode, ResultsView } from './database';
+
+export type { ResultsView };
 
 export type { GameMode };
 
@@ -54,6 +56,7 @@ export interface QuizSession {
   code: string;
   status: SessionStatus;
   currentQuestionId?: string | null;
+  resultsView?: ResultsView;
   startedAt?: Date | null;
   endedAt?: Date | null;
   quiz?: Quiz;
@@ -78,4 +81,14 @@ export interface QuizTemplate {
   description: string;
   category: string;
   questions: Omit<Question, 'id' | 'quizId'>[];
+}
+
+export interface QuestionResult {
+  id?: string;
+  sessionId: string;
+  questionId: string;
+  shownAt?: Date;
+  answerDistribution: Record<string, number>; // optionId -> count
+  totalAnswers: number;
+  correctAnswers: number;
 }

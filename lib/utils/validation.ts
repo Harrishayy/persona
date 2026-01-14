@@ -48,10 +48,20 @@ export const codeInputSchema = z.object({
 });
 
 export const answerSubmissionSchema = z.object({
-  sessionId: z.string().uuid(),
-  questionId: z.string().uuid(),
+  sessionId: z.union([
+    z.string().uuid(), 
+    z.string().min(1, 'Session ID is required')
+  ]).transform(val => String(val)),
+  questionId: z.union([
+    z.string().uuid(), 
+    z.string().min(1, 'Question ID is required')
+  ]).transform(val => String(val)),
   answerText: z.string().optional(),
-  optionId: z.string().uuid().optional(),
+  optionId: z.union([
+    z.string().uuid(), 
+    z.string().min(1),
+    z.number().transform(n => String(n))
+  ]).optional().transform(val => val ? String(val) : undefined),
 }).refine((data) => {
   return data.answerText || data.optionId;
 }, {

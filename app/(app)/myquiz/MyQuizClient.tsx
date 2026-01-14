@@ -22,6 +22,8 @@ interface Quiz {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  imageUrl?: string;
+  emoji?: string;
 }
 
 interface MyQuizClientProps {
@@ -154,22 +156,47 @@ export function MyQuizClient({ initialQuizzes }: MyQuizClientProps) {
         
         return (
           <Card key={quiz.quizId} variant={variant} className="flex flex-col">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="text-2xl font-black flex-1">{quiz.title}</h3>
-              <span className={`text-xs font-bold px-2 py-1 rounded ${
-                isPublished 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-gray-500 text-white'
-              }`}>
-                {quiz.status}
-              </span>
+            <div className="flex gap-3 mb-2">
+              {/* Small image/emoji on the side */}
+              {(quiz.imageUrl || quiz.emoji) && (
+                <div className="flex-shrink-0">
+                  {quiz.emoji ? (
+                    <div className="text-3xl w-16 h-16 flex items-center justify-center border-4 border-[#1F2937] rounded-lg bg-white">
+                      {quiz.emoji}
+                    </div>
+                  ) : quiz.imageUrl ? (
+                    <img
+                      src={quiz.imageUrl}
+                      alt={quiz.title}
+                      className="w-16 h-16 object-cover border-4 border-[#1F2937] rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                </div>
+              )}
+              
+              {/* Title and status */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-2xl font-black flex-1">{quiz.title}</h3>
+                  <span className={`text-xs font-bold px-2 py-1 rounded flex-shrink-0 ${
+                    isPublished 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-gray-500 text-white'
+                  }`}>
+                    {quiz.status}
+                  </span>
+                </div>
+                
+                {quiz.description && (
+                  <p className="text-base font-bold opacity-90 mb-4 flex-grow">
+                    {quiz.description}
+                  </p>
+                )}
+              </div>
             </div>
-            
-            {quiz.description && (
-              <p className="text-base font-bold opacity-90 mb-4 flex-grow">
-                {quiz.description}
-              </p>
-            )}
 
             <div className="mt-auto pt-4 space-y-2">
               <Button 

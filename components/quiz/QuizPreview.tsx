@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { QuestionCard } from '@/components/ui/QuestionCard';
 import { Gamepad2 } from 'lucide-react';
-import type { Quiz, Round, Question } from '@/lib/types/app';
+import type { Quiz, Question } from '@/lib/types/app';
 import { GAME_MODES } from '@/lib/utils/game-modes';
 import { ALL_VARIANTS } from '@/lib/utils/colors';
 import type { ColorVariant } from '@/lib/utils/colors';
@@ -16,7 +16,6 @@ interface QuizPreviewProps {
     imageUrl?: string;
     emoji?: string;
     gameMode?: string;
-    rounds?: Round[];
     questions?: Question[];
   };
   activeQuestionIndex?: number | null;
@@ -142,7 +141,7 @@ export function QuizPreview({ quiz, activeQuestionIndex }: QuizPreviewProps) {
         )}
       </Card>
 
-      {/* Rounds Preview */}
+      {/* Rounds Preview - Removed rounds feature
       {quiz.rounds && quiz.rounds.length > 0 && (
         <div className="space-y-4">
           {quiz.rounds.map((round, roundIndex) => {
@@ -197,8 +196,8 @@ export function QuizPreview({ quiz, activeQuestionIndex }: QuizPreviewProps) {
         </div>
       )}
 
-      {/* Questions without rounds */}
-      {quiz.questions && (!quiz.rounds || quiz.rounds.length === 0) && (
+      {/* Questions */}
+      {quiz.questions && (
         <div className="space-y-3">
           <h2 className="text-2xl font-black text-[#1F2937]">Questions</h2>
           {quiz.questions.map((question, index) => (

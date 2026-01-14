@@ -28,31 +28,132 @@ import { cn } from '@/lib/utils/cn';
 interface QuestionListProps {
   questions: Question[];
   rounds?: Array<{ id?: number; order: number; title?: string }>;
+  isEditing?: boolean;
   onQuestionsChange: (questions: Question[]) => void;
   onAddQuestion: () => void;
   onUpdateQuestion: (index: number, question: Question) => void;
   onDeleteQuestion: (index: number) => void;
   onActiveQuestionChange?: (index: number | null) => void;
+  onImageFileChange?: (index: number, file: File | null) => void;
 }
 
 interface SortableQuestionItemProps {
   question: Question;
   index: number;
   isExpanded: boolean;
+  isEditing?: boolean;
   onToggleExpand: () => void;
   onUpdate: (question: Question) => void;
   onDelete: () => void;
   rounds?: Array<{ id?: number; order: number; title?: string }>;
+  onImageFileChange?: (index: number, file: File | null) => void;
+}
+
+// Non-sortable version for SSR (prevents hydration mismatch)
+function QuestionItem({
+  question,
+  index,
+  isExpanded,
+  isEditing = false,
+  onToggleExpand,
+  onUpdate,
+  onDelete,
+  rounds,
+  onImageFileChange,
+}: SortableQuestionItemProps) {
+  const isCompleted = question.text.trim().length > 0;
+
+  return (
+    <Card className="mb-3 transition-all duration-200">
+      {/* Header with drag handle and expand/collapse */}
+      <div className="flex items-center justify-between mb-4">
+        {/* Drag handle and question info */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Grip icon without drag attributes for SSR */}
+          <div>
+            <GripVertical className="w-5 h-5 text-[#6B7280] flex-shrink-0" />
+          </div>
+          <div className="w-8 h-8 flex items-center justify-center border-4 border-[#1F2937] rounded-lg bg-white font-black text-[#1F2937] flex-shrink-0">
+            {index + 1}
+          </div>
+          {!isExpanded ? (
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleExpand}>
+              <h3 className="text-lg font-black text-[#1F2937] truncate">
+                {question.text || `Question ${index + 1}`}
+              </h3>
+              {isCompleted && (
+                <p className="text-sm font-bold text-[#6B7280]">
+                  {question.type} • {question.options?.length || 0} options
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleExpand}>
+              <h3 className="text-lg font-black text-[#1F2937]">
+                Question {index + 1}
+              </h3>
+            </div>
+          )}
+        </div>
+        
+        {/* Expand/Collapse and Delete buttons */}
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand();
+            }}
+            className="p-2 hover:bg-[#1F2937] hover:text-white rounded-lg transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-5 h-5" />
+            ) : (
+              <ChevronDown className="w-5 h-5" />
+            )}
+          </button>
+          {isExpanded && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Expanded Content - Question Editor without its own card wrapper */}
+      {isExpanded && (
+        <QuestionEditor
+          question={question}
+          index={index}
+          onChange={onUpdate}
+          onDelete={onDelete}
+          rounds={rounds}
+          hideHeader={true}
+          isEditing={isEditing}
+          onImageFileChange={onImageFileChange}
+        />
+      )}
+    </Card>
+  );
 }
 
 function SortableQuestionItem({
   question,
   index,
   isExpanded,
+  isEditing = false,
   onToggleExpand,
   onUpdate,
   onDelete,
   rounds,
+  onImageFileChange,
 }: SortableQuestionItemProps) {
   const {
     attributes,
@@ -148,6 +249,8 @@ function SortableQuestionItem({
           onDelete={onDelete}
           rounds={rounds}
           hideHeader={true}
+          isEditing={isEditing}
+          onImageFileChange={onImageFileChange}
         />
       )}
     </Card>
@@ -157,13 +260,16 @@ function SortableQuestionItem({
 export function QuestionList({
   questions,
   rounds,
+  isEditing = false,
   onQuestionsChange,
   onAddQuestion,
   onUpdateQuestion,
   onDeleteQuestion,
   onActiveQuestionChange,
+  onImageFileChange,
 }: QuestionListProps) {
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set([0]));
+  const [isMounted, setIsMounted] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -171,6 +277,11 @@ export function QuestionList({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Only render DndContext after client-side mount to prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Track previous questions length to detect new additions
   const prevQuestionsLengthRef = useRef(questions.length);
@@ -283,29 +394,49 @@ export function QuestionList({
       </div>
 
       <div className="bg-white rounded-lg p-4">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={questions.map((q, i) => `question-${i}-${q.order}`)}
-            strategy={verticalListSortingStrategy}
+        {isMounted ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
+            <SortableContext
+              items={questions.map((q, i) => `question-${i}-${q.order}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              {questions.map((question, index) => (
+                <SortableQuestionItem
+                  key={`question-${index}-${question.order}`}
+                  question={question}
+                  index={index}
+                  isExpanded={expandedQuestions.has(index)}
+                  isEditing={isEditing}
+                  onToggleExpand={() => toggleQuestionExpand(index)}
+                  onUpdate={(q) => onUpdateQuestion(index, q)}
+                  onDelete={() => onDeleteQuestion(index)}
+                  rounds={rounds}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          // Fallback render without drag-and-drop during SSR
+          <div>
             {questions.map((question, index) => (
-              <SortableQuestionItem
+              <QuestionItem
                 key={`question-${index}-${question.order}`}
                 question={question}
                 index={index}
                 isExpanded={expandedQuestions.has(index)}
+                isEditing={isEditing}
                 onToggleExpand={() => toggleQuestionExpand(index)}
                 onUpdate={(q) => onUpdateQuestion(index, q)}
                 onDelete={() => onDeleteQuestion(index)}
                 rounds={rounds}
               />
             ))}
-          </SortableContext>
-        </DndContext>
+          </div>
+        )}
       </div>
     </div>
   );

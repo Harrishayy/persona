@@ -48,7 +48,7 @@ export async function POST(
     // Check if already joined
     const existing = await db.query.participants.findFirst({
       where: (participants, { and, eq }) => and(
-        eq(participants.sessionId, session.id),
+        eq(participants.sessionId, session.sessionId),
         eq(participants.userId, playerId)
       ),
     });
@@ -59,7 +59,7 @@ export async function POST(
 
     // Create participant
     const [participant] = await db.insert(participants).values({
-      sessionId: session.id,
+      sessionId: session.sessionId,
       userId: playerId,
       userName: userName.trim(),
     }).returning();

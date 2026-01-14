@@ -127,7 +127,88 @@ export async function updateSessionQuestion(code: string, questionId: string | n
 
   const [updated] = await db
     .update(quizSessions)
-    .set({ currentQuestionId: questionId })
+    .set({ 
+      currentQuestionId: questionId,
+      resultsView: null, // Reset results view when moving to new question
+    })
+    .where(eq(quizSessions.code, code))
+    .returning();
+
+  return updated;
+}
+
+export async function showBarChart(code: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const session = await db.query.quizSessions.findFirst({
+    where: eq(quizSessions.code, code),
+    with: {
+      quiz: true,
+    },
+  });
+
+  if (!session || session.quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  const [updated] = await db
+    .update(quizSessions)
+    .set({ resultsView: 'barChart' })
+    .where(eq(quizSessions.code, code))
+    .returning();
+
+  return updated;
+}
+
+export async function showRanking(code: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const session = await db.query.quizSessions.findFirst({
+    where: eq(quizSessions.code, code),
+    with: {
+      quiz: true,
+    },
+  });
+
+  if (!session || session.quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  const [updated] = await db
+    .update(quizSessions)
+    .set({ resultsView: 'ranking' })
+    .where(eq(quizSessions.code, code))
+    .returning();
+
+  return updated;
+}
+
+export async function hideResults(code: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const session = await db.query.quizSessions.findFirst({
+    where: eq(quizSessions.code, code),
+    with: {
+      quiz: true,
+    },
+  });
+
+  if (!session || session.quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  const [updated] = await db
+    .update(quizSessions)
+    .set({ resultsView: null })
     .where(eq(quizSessions.code, code))
     .returning();
 
@@ -183,6 +264,36 @@ export async function deleteSession(code: string) {
   await db
     .delete(quizSessions)
     .where(eq(quizSessions.code, code));
+
+  return { success: true };
+}
+
+export async function kickParticipant(code: string, userId: string) {
+  const { user } = await withAuth();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  const session = await db.query.quizSessions.findFirst({
+    where: eq(quizSessions.code, code),
+    with: {
+      quiz: true,
+    },
+  });
+
+  if (!session || session.quiz.hostId !== user.id) {
+    throw new Error('Forbidden');
+  }
+
+  // Delete participant from the session
+  await db
+    .delete(participants)
+    .where(
+      and(
+        eq(participants.sessionId, session.sessionId),
+        eq(participants.userId, userId)
+      )
+    );
 
   return { success: true };
 }

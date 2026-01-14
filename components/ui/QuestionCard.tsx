@@ -39,6 +39,10 @@ export function QuestionCard({
               alt="Question"
               className="h-auto max-h-96 max-w-full object-contain"
               style={{ display: 'block' }}
+              onError={(e) => {
+                // Hide image on error (blob URLs may be invalid)
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
             />
           </div>
         </div>

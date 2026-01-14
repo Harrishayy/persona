@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 import { db } from '@/lib/db/connection';
-import { quizSessions } from '@/lib/db/schema';
+import { quizSessions, quizzes, participants } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { HostDashboard } from '@/components/quiz/HostDashboard';
 import { HostPageClient } from './HostPageClient';
@@ -20,30 +20,47 @@ export default async function HostPage({ params }: HostPageProps) {
 
   const { code } = await params;
 
-  const session = await db.query.quizSessions.findFirst({
+  // Fetch session data separately to avoid complex nested query issues with UUIDs after migration
+  const basicSession = await db.query.quizSessions.findFirst({
     where: eq(quizSessions.code, code),
+  });
+
+  if (!basicSession) {
+    redirect('/');
+  }
+
+  // Fetch related data separately
+  const quiz = await db.query.quizzes.findFirst({
+    where: eq(quizzes.quizId, basicSession.quizId),
     with: {
-      quiz: {
+      questions: {
         with: {
-          questions: {
-            with: {
-              options: true,
-            },
-            orderBy: (questions, { asc }) => [asc(questions.order)],
-          },
+          options: true,
         },
+        orderBy: (questions, { asc }) => [asc(questions.order)],
       },
-      participants: true,
     },
   });
 
-  if (!session) {
+  if (!quiz) {
     redirect('/');
   }
 
-  if (session.quiz.hostId !== user.id) {
+  if (quiz.hostId !== user.id) {
     redirect('/');
   }
+
+  const sessionParticipants = await db.query.participants.findMany({
+    where: eq(participants.sessionId, basicSession.sessionId),
+  });
+
+  // Combine into session object
+  const session = {
+    ...basicSession,
+    quiz,
+    participants: sessionParticipants,
+  };
+
 
   const typedSession: QuizSession = convertQuizSession(session as any);
 

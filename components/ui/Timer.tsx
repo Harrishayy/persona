@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface TimerProps {
@@ -12,17 +12,44 @@ interface TimerProps {
 
 export function Timer({ initialSeconds, onComplete, variant = 'circular', className }: TimerProps) {
   const [seconds, setSeconds] = useState(initialSeconds);
+  const onCompleteRef = useRef(onComplete);
+  const hasCompletedRef = useRef(false);
+
+  // Keep ref updated
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // Reset hasCompletedRef when initialSeconds changes
+  useEffect(() => {
+    hasCompletedRef.current = false;
+    setSeconds(initialSeconds);
+  }, [initialSeconds]);
 
   useEffect(() => {
+    if (seconds <= 0 && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      // Defer the callback to avoid state updates during render
+      setTimeout(() => {
+        onCompleteRef.current?.();
+      }, 0);
+      return;
+    }
+
     if (seconds <= 0) {
-      onComplete?.();
       return;
     }
 
     const timer = setInterval(() => {
       setSeconds((prev) => {
         if (prev <= 1) {
-          onComplete?.();
+          // Defer the callback to avoid state updates during render
+          if (!hasCompletedRef.current) {
+            hasCompletedRef.current = true;
+            setTimeout(() => {
+              onCompleteRef.current?.();
+            }, 0);
+          }
           return 0;
         }
         return prev - 1;
@@ -30,7 +57,7 @@ export function Timer({ initialSeconds, onComplete, variant = 'circular', classN
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [seconds, onComplete]);
+  }, [seconds]);
 
   const minutes = Math.floor(seconds / 60);
   const displaySeconds = seconds % 60;

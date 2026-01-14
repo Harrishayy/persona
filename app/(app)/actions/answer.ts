@@ -34,7 +34,7 @@ export async function submitAnswer(data: {
   let isCorrect = false;
   if (validated.optionId) {
     const option = await db.query.questionOptions.findFirst({
-      where: eq(questionOptions.id, validated.optionId),
+      where: eq(questionOptions.optionId, validated.optionId),
     });
     isCorrect = option?.isCorrect ?? false;
   }
@@ -60,7 +60,7 @@ export async function submitAnswer(data: {
       await db
         .update(participants)
         .set({ score: participant.score + 1 })
-        .where(eq(participants.id, participant.id));
+        .where(eq(participants.participantId, participant.participantId));
     }
   }
 

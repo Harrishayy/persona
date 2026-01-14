@@ -23,5 +23,12 @@
       "tag": "0002_boring_pyro",
       "breakpoints": true
     },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1768423179728,
+      "tag": "0003_eminent_supreme_intelligence",
+      "breakpoints": true
+    }
   ]
 }

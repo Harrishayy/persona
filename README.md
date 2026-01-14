@@ -20,6 +20,54 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+pnpm i## Environment Setup
+
+Copy `.env.example` to `.env.local` and fill in the required values:
+
+```bash
+cp .env.example .env.local
+```
+
+### Required Environment Variables
+
+- **WorkOS**: Authentication credentials
+- **Database**: Connection string for your database
+- **Cloudflare R2**: Image storage configuration (see below)
+
+### Cloudflare R2 Setup
+
+1. **Create R2 Bucket**:
+   - Go to [Cloudflare Dashboard](https://dash.cloudflare.com) > R2
+   - Click "Create bucket"
+   - Enter a bucket name (e.g., `persona-images`)
+
+2. **Create R2 API Token**:
+   - Go to R2 > Manage R2 API Tokens
+   - Click "Create API token"
+   - Set permissions: Object Read & Write
+   - Copy the Access Key ID and Secret Access Key
+
+3. **Configure Public Access** (choose one):
+   
+   **Option A: Development (r2.dev subdomain)**:
+   - Go to your bucket > Settings
+   - Enable "Public Development URL"
+   - Leave `R2_PUBLIC_URL` empty in `.env.local` (auto-generated)
+   
+   **Option B: Production (Custom Domain)**:
+   - Go to your bucket > Settings > Custom Domains
+   - Connect your domain (e.g., `images.yourdomain.com`)
+   - Set `R2_PUBLIC_URL=https://images.yourdomain.com` in `.env.local`
+
+4. **Add to `.env.local`**:
+   ```env
+   R2_ACCOUNT_ID=your_account_id
+   R2_ACCESS_KEY_ID=your_access_key_id
+   R2_SECRET_ACCESS_KEY=your_secret_access_key
+   R2_BUCKET_NAME=your_bucket_name
+   R2_PUBLIC_URL=  # Leave empty for r2.dev, or set custom domain
+   ```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

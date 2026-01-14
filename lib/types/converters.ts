@@ -39,12 +39,16 @@ function validateSessionStatus(status: string): SessionStatus {
 
 /**
  * Convert database question option to app type
+ * Handles both optionId (from Drizzle schema) and id (from type definition)
  */
 export function convertQuestionOption(
-  option: DatabaseQuestionOption
+  option: DatabaseQuestionOption | any
 ): QuestionOption {
+  // Drizzle returns optionId, but type definition may use id
+  const optionId = (option as any).optionId || option.id;
+  
   return {
-    id: option.id,
+    id: optionId,
     text: option.text,
     isCorrect: option.isCorrect,
     order: option.order,
@@ -53,10 +57,14 @@ export function convertQuestionOption(
 
 /**
  * Convert database question to app type
+ * Handles both questionId (from Drizzle schema) and id (from type definition)
  */
-export function convertQuestion(question: DatabaseQuestion): Question {
+export function convertQuestion(question: DatabaseQuestion | any): Question {
+  // Drizzle returns questionId, but type definition may use id
+  const questionId = (question as any).questionId || question.id;
+  
   return {
-    id: question.id,
+    id: questionId,
     type: question.type,
     text: question.text,
     imageUrl: question.imageUrl ?? undefined,
@@ -68,10 +76,14 @@ export function convertQuestion(question: DatabaseQuestion): Question {
 
 /**
  * Convert database quiz to app type
+ * Handles both quizId (from Drizzle schema) and id (from type definition)
  */
-export function convertQuiz(quiz: DatabaseQuiz): Quiz {
+export function convertQuiz(quiz: DatabaseQuiz | any): Quiz {
+  // Drizzle returns quizId, but type definition may use id
+  const quizId = (quiz as any).quizId || quiz.id;
+  
   return {
-    id: quiz.id,
+    id: quizId,
     title: quiz.title,
     description: quiz.description ?? undefined,
     hostId: quiz.hostId,
@@ -84,10 +96,14 @@ export function convertQuiz(quiz: DatabaseQuiz): Quiz {
 
 /**
  * Convert database participant to app type
+ * Handles both participantId (from Drizzle schema) and id (from type definition)
  */
-export function convertParticipant(participant: DatabaseParticipant): Participant {
+export function convertParticipant(participant: DatabaseParticipant | any): Participant {
+  // Drizzle returns participantId, but type definition may use id
+  const participantId = (participant as any).participantId || participant.id;
+  
   return {
-    id: participant.id,
+    id: participantId,
     sessionId: participant.sessionId,
     userId: participant.userId,
     userName: participant.userName ?? undefined,
@@ -110,6 +126,7 @@ export function convertQuizSession(session: DatabaseQuizSession | any): QuizSess
     code: session.code,
     status: validateSessionStatus(session.status),
     currentQuestionId: session.currentQuestionId,
+    resultsView: session.resultsView ?? undefined,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
     createdAt: session.createdAt,

@@ -149,24 +149,37 @@ export function FindQuizClient() {
             const isHosting = hostingQuizId === quiz.quizId;
             return (
               <Card key={quiz.quizId} variant={variant} className="flex flex-col">
-                <div className="mb-4">
-                  {quiz.emoji && (
-                    <div className="text-4xl mb-2">{quiz.emoji}</div>
+                <div className="flex gap-3 mb-2">
+                  {/* Small image/emoji on the side */}
+                  {(quiz.imageUrl || quiz.emoji) && (
+                    <div className="flex-shrink-0">
+                      {quiz.emoji ? (
+                        <div className="text-3xl w-16 h-16 flex items-center justify-center border-4 border-[#1F2937] rounded-lg bg-white">
+                          {quiz.emoji}
+                        </div>
+                      ) : quiz.imageUrl ? (
+                        <img
+                          src={quiz.imageUrl}
+                          alt={quiz.title}
+                          className="w-16 h-16 object-cover border-4 border-[#1F2937] rounded-lg"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                    </div>
                   )}
-                  {quiz.imageUrl && !quiz.emoji && (
-                    <img
-                      src={quiz.imageUrl}
-                      alt={quiz.title}
-                      className="w-full h-32 object-cover mb-2 border-4 border-[#1F2937] rounded-lg"
-                    />
-                  )}
+                  
+                  {/* Title and description */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-2xl font-black mb-2">{quiz.title}</h3>
+                    {quiz.description && (
+                      <p className="text-base font-bold opacity-90 mb-4 flex-grow">
+                        {quiz.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <h3 className="text-2xl font-black mb-2">{quiz.title}</h3>
-                {quiz.description && (
-                  <p className="text-base font-bold opacity-90 mb-4 flex-grow">
-                    {quiz.description}
-                  </p>
-                )}
                 <div className="mt-auto pt-4 space-y-2">
                   <Button
                     color={variant}
